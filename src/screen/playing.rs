@@ -3,12 +3,12 @@
 use std::{f32::consts::PI, time::Duration};
 
 use bevy::{
-    color::palettes::css::{BLACK, BLUE, FOREST_GREEN, GREEN, LIGHT_GREEN, WHITE},
+    color::palettes::css::{BLACK, BLUE, LIGHT_GREEN, WHITE},
     input::common_conditions::input_just_pressed,
     prelude::*,
 };
 use bevy_tweening::{
-    lens::{TransformPositionLens, TransformScaleLens},
+    lens::{TransformPositionLens},
     Animator, EaseFunction, Tween,
 };
 use num_bigint::BigUint;

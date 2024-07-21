@@ -222,12 +222,12 @@ fn on_purchase(
                     let button_entity = button_entity_commands.id();
 
                     button_entity_commands.insert(
-                        (On::<Pointer<Click>>::commands_mut(move |_ev, commands| {
+                        On::<Pointer<Click>>::commands_mut(move |_ev, commands| {
                             commands.trigger(Purchase {
                                 upgrade: new_upgrade.clone(),
                                 upgrade_button_entity: button_entity,
                             });
-                        })),
+                        }),
                     );
                 });
 

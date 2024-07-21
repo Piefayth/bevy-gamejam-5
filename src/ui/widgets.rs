@@ -489,7 +489,7 @@ impl<T: Spawn> Widgets for T {
 
     fn socket(&mut self, socket_material: Handle<SocketUiMaterial>) -> EntityCommands {
         let entity = self.spawn(
-            (MaterialNodeBundle {
+            MaterialNodeBundle {
                 style: Style {
                     width: Px(64.),
                     height: Px(64.),
@@ -497,7 +497,7 @@ impl<T: Spawn> Widgets for T {
                 },
                 material: socket_material,
                 ..default()
-            }),
+            },
         );
 
         entity

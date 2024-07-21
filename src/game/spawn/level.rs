@@ -4,19 +4,18 @@ use std::f32::consts::PI;
 
 use bevy::{
     color::palettes::{
-        css::{BLACK, BLUE, DARK_SLATE_GRAY},
-        tailwind::{GRAY_900, GRAY_950, SLATE_800, SLATE_900},
+        css::{BLACK, BLUE},
+        tailwind::{GRAY_950},
     },
     math::VectorSpace,
     prelude::*,
-    render::render_resource::{AsBindGroup, ShaderRef},
-    sprite::{Material2d, Material2dPlugin, MaterialMesh2dBundle, Mesh2dHandle},
+    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
 };
 use bevy_mod_picking::{
     events::{Click, Pointer},
     picking_core::Pickable,
     pointer::PointerButton,
-    prelude::{ListenerInput, On},
+    prelude::{On},
 };
 use num_bigint::BigUint;
 
@@ -102,7 +101,7 @@ fn spawn_level(
     mut ring_materials: ResMut<Assets<RingMaterial>>,
     mut hand_materials: ResMut<Assets<HandMaterial>>,
     mut socket_materials: ResMut<Assets<SocketMaterial>>,
-    mut meshes: ResMut<Assets<Mesh>>,
+    meshes: ResMut<Assets<Mesh>>,
     gameplay_meshes: Res<GameplayMeshes>,
     q_ui_cycle_display: Query<Entity, With<CycleDisplay>>,
 ) {
@@ -205,7 +204,7 @@ pub fn socket_position(index: usize, num_points: usize) -> Vec2 {
 }
 
 pub fn spawn_socket(
-    mut commands: &mut ChildBuilder,
+    commands: &mut ChildBuilder,
     color: SocketColor,
     hand: Entity,
     ring: Entity,
@@ -232,7 +231,7 @@ pub fn spawn_socket(
                 ..default()
             },
         ))
-        .insert(On::<Pointer<Click>>::commands_mut(|ev, mut commands| {
+        .insert(On::<Pointer<Click>>::commands_mut(|ev, commands| {
             if ev.event.button == PointerButton::Primary {
                 commands.trigger(UpdateSocketColor {
                     socket: ev.target,

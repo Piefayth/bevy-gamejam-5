@@ -2,8 +2,7 @@
 
 use bevy::{
     color::palettes::{
-        css::{BLUE, DARK_GRAY, GRAY, LIGHT_CORAL, LIGHT_CYAN, LIGHT_GRAY, RED},
-        tailwind::{GRAY_400, GRAY_600, GRAY_700},
+        tailwind::{GRAY_600, GRAY_700},
     },
     prelude::*,
     sprite::{MaterialMesh2dBundle, Mesh2dHandle},

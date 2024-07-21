@@ -1,7 +1,5 @@
 use bevy::{
     prelude::*,
-    render::texture::{ImageLoaderSettings, ImageSampler},
-    sprite::Material2d,
     utils::HashMap,
 };
 
