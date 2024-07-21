@@ -1,9 +1,9 @@
 //! The title screen that appears when the game starts.
 
-use bevy::prelude::*;
+use bevy::{color::palettes::{css::{BLUE, DARK_GRAY, GRAY, LIGHT_CORAL, LIGHT_CYAN, LIGHT_GRAY, RED}, tailwind::{GRAY_400, GRAY_600, GRAY_700}}, prelude::*, sprite::{MaterialMesh2dBundle, Mesh2dHandle}};
 
 use super::Screen;
-use crate::ui::prelude::*;
+use crate::{game::materials::materials::BackgroundMaterial, ui::prelude::*};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Title), enter_title);
@@ -22,7 +22,14 @@ enum TitleAction {
     Exit,
 }
 
-fn enter_title(mut commands: Commands) {
+#[derive(Component)]
+pub struct Background;
+
+fn enter_title(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<BackgroundMaterial>>,
+) {
     commands
         .ui_root()
         .insert(StateScoped(Screen::Title))
@@ -33,6 +40,19 @@ fn enter_title(mut commands: Commands) {
             #[cfg(not(target_family = "wasm"))]
             children.button("Exit").insert(TitleAction::Exit);
         });
+
+    commands.spawn((
+        Background,
+        MaterialMesh2dBundle {
+            mesh: Mesh2dHandle(meshes.add(Rectangle::new(100000.0, 100000.0))),
+            material: materials.add(BackgroundMaterial {
+                base_color: GRAY_600.into(),
+                blend_color: GRAY_700.into(),
+            }),
+            transform: Transform::from_xyz(0., 0., -999.),
+            ..default()
+        },
+    ));
 }
 
 fn handle_title_action(

@@ -1,5 +1,20 @@
 {
     // Allow `rust-analyzer` and `cargo` to run simultaneously.
     // This uses extra storage space, so consider commenting it out.
-    "rust-analyzer.cargo.targetDir": true
+    "rust-analyzer.cargo.targetDir": true,
+    "workbench.colorCustomizations": {
+        "activityBar.activeBackground": "#b59af0",
+        "activityBar.background": "#b59af0",
+        "activityBar.foreground": "#15202b",
+        "activityBar.inactiveForeground": "#15202b99",
+        "activityBarBadge.background": "#fbebe3",
+        "activityBarBadge.foreground": "#15202b",
+        "sash.hoverBorder": "#b59af0",
+        "statusBar.background": "#946dea",
+        "statusBar.foreground": "#15202b",
+        "statusBarItem.hoverBackground": "#7340e4",
+        "statusBarItem.remoteBackground": "#946dea",
+        "statusBarItem.remoteForeground": "#15202b"
+    },
+    "peacock.color": "#946dea"
 }

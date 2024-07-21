@@ -9,6 +9,8 @@ use bevy::{
     audio::{AudioPlugin, Volume},
     prelude::*,
 };
+use bevy_mod_picking::DefaultPickingPlugins;
+use bevy_tweening::TweeningPlugin;
 
 pub struct AppPlugin;
 
@@ -54,6 +56,12 @@ impl Plugin for AppPlugin {
 
         // Add other plugins.
         app.add_plugins((game::plugin, screen::plugin, ui::plugin));
+
+        // Add 3rd party plugins.
+        app.add_plugins((
+            TweeningPlugin,
+            DefaultPickingPlugins
+        ));
 
         // Enable dev tools for dev builds.
         #[cfg(feature = "dev")]

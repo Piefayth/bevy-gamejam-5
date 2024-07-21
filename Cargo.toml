@@ -12,6 +12,10 @@ log = { version = "0.4", features = [
     "release_max_level_warn",
 ] }
 rand = "0.8"
+num-bigint = "0.4.6"
+bevy-inspector-egui = "0.25"
+bevy_mod_picking = { version = "0.20"}
+bevy_tweening = { version = "0.11" }
 
 [features]
 default = [
