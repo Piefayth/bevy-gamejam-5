@@ -1,5 +1,8 @@
-use bevy::{prelude::*, render::render_resource::{AsBindGroup, ShaderRef}, sprite::Material2d};
-
+use bevy::{
+    prelude::*,
+    render::render_resource::{AsBindGroup, ShaderRef},
+    sprite::Material2d,
+};
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct RingMaterial {
@@ -15,7 +18,6 @@ impl Material2d for RingMaterial {
         "shaders/ring.wgsl".into()
     }
 }
-
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct HandMaterial {
@@ -50,7 +52,6 @@ impl Material2d for SocketMaterial {
     }
 }
 
-
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct SocketUiMaterial {
     #[uniform(0)]
@@ -60,12 +61,11 @@ pub struct SocketUiMaterial {
     pub bevel_color: LinearRgba,
 }
 
-impl UiMaterial  for SocketUiMaterial {
+impl UiMaterial for SocketUiMaterial {
     fn fragment_shader() -> ShaderRef {
         "shaders/ui_socket.wgsl".into()
     }
 }
-
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct BackgroundMaterial {

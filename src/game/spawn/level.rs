@@ -38,10 +38,7 @@ pub struct GameplayMeshes {
     pub quad64: Mesh2dHandle,
 }
 
-fn prepare_meshes(
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut gamemplay_meshes: ResMut<GameplayMeshes>,
-) {
+fn prepare_meshes(mut meshes: ResMut<Assets<Mesh>>, mut gamemplay_meshes: ResMut<GameplayMeshes>) {
     gamemplay_meshes.quad512 = Mesh2dHandle(meshes.add(Rectangle::from_size(Vec2::splat(512.))));
     gamemplay_meshes.quad64 = Mesh2dHandle(meshes.add(Rectangle::from_size(Vec2::splat(64.))));
 }
@@ -112,7 +109,6 @@ fn spawn_level(
     // this is being triggered from the playing screen
 
     // spawn a quad and lets put a shader on it
-
 
     let ring_entity = commands
         .spawn((
@@ -192,17 +188,14 @@ fn spawn_level(
             }
         });
 
-        commands.entity(ring_entity).insert(Ring {
-            sockets: starting_sockets,
-            hands: vec![hand_entity],
-            ..default()
-        });
+    commands.entity(ring_entity).insert(Ring {
+        sockets: starting_sockets,
+        hands: vec![hand_entity],
+        ..default()
+    });
 }
 
-pub fn socket_position(
-    index: usize,
-    num_points: usize,
-) -> Vec2 {
+pub fn socket_position(index: usize, num_points: usize) -> Vec2 {
     let angle = 2.0 * PI * index as f32 / num_points as f32 + PI / 2.0;
     let ring_center_radius = RING_RADIUS - RING_THICKNESS / 2.0;
     let x = 0.5 * ring_center_radius * RING_QUAD_DIMENSIONS.x * angle.cos();

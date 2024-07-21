@@ -73,18 +73,16 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
 
     match upgrade_kind {
         UpgradeKind::None => BigUint::ZERO,
-        UpgradeKind::AddSocket(upgrade) => base_add_socket_cost.pow((upgrade.level as f32 * add_socket_scale_factor) as u32),
+        UpgradeKind::AddSocket(upgrade) => {
+            base_add_socket_cost.pow((upgrade.level as f32 * add_socket_scale_factor) as u32)
+        }
     }
 }
 
 #[derive(Component)]
 struct UpgradeButtonsContainer;
 
-fn on_new_shop(
-    trigger: Trigger<NewShop>,
-    mut commands: Commands,
-    mut unlocks: ResMut<Unlocks>,
-) {
+fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: ResMut<Unlocks>) {
     unlocks.0 = vec![
         Unlock {
             when: vec![],
@@ -93,7 +91,7 @@ fn on_new_shop(
         Unlock {
             when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: 1 })],
             then: UpgradeKind::AddSocket(AddSocketUpgrade { level: 2 }),
-        }
+        },
     ];
 
     let parent = trigger.event().parent;
@@ -110,9 +108,9 @@ fn on_new_shop(
     commands.trigger(Purchase {
         upgrade: Upgrade {
             upgrade_kind: UpgradeKind::None,
-            cost:  upgrade_cost(UpgradeKind::None)
+            cost: upgrade_cost(UpgradeKind::None),
         },
-        upgrade_button_entity: Entity::PLACEHOLDER
+        upgrade_button_entity: Entity::PLACEHOLDER,
     })
 }
 
@@ -169,7 +167,8 @@ fn on_purchase(
                 });
 
                 for socket_entity in &ring.sockets {
-                    let (_e, socket, mut socket_transform) = q_sockets.get_mut(*socket_entity).unwrap();
+                    let (_e, socket, mut socket_transform) =
+                        q_sockets.get_mut(*socket_entity).unwrap();
                     socket_transform.translation =
                         socket_position(socket.index, ring.sockets.len() + 1).extend(1.)
                 }
@@ -193,39 +192,44 @@ fn on_purchase(
 
                         ring.sockets.push(new_socket_entity);
                     });
-
             }
         }
     }
 
     // 2. Unlock what is available now
     let container = q_upgrade_button_container.single();
-    
+
     let mut indices_to_remove = Vec::new();
 
     for (index, unlock) in unlocks.0.iter().enumerate() {
-        if unlock.when.iter().all(|item| upgrade_history.history.contains(item)) {
-            commands.entity(container).with_children(|button_container| {
-                let new_upgrade = Upgrade {
-                    upgrade_kind: unlock.then,
-                    cost: upgrade_cost(unlock.then),
-                };
+        if unlock
+            .when
+            .iter()
+            .all(|item| upgrade_history.history.contains(item))
+        {
+            commands
+                .entity(container)
+                .with_children(|button_container| {
+                    let new_upgrade = Upgrade {
+                        upgrade_kind: unlock.then,
+                        cost: upgrade_cost(unlock.then),
+                    };
 
-                let mut button_entity_commands = button_container.shop_button(
-                    upgrade_text(&new_upgrade),
-                    font_handles[&FontKey::Default].clone(),
-                );
-                let button_entity = button_entity_commands.id();
-                
-                button_entity_commands.insert(
-                    (On::<Pointer<Click>>::commands_mut(move |_ev, commands| {
-                        commands.trigger(Purchase {
-                            upgrade: new_upgrade.clone(),
-                            upgrade_button_entity: button_entity,
-                        });
-                    })),
-                );
-            });
+                    let mut button_entity_commands = button_container.shop_button(
+                        upgrade_text(&new_upgrade),
+                        font_handles[&FontKey::Default].clone(),
+                    );
+                    let button_entity = button_entity_commands.id();
+
+                    button_entity_commands.insert(
+                        (On::<Pointer<Click>>::commands_mut(move |_ev, commands| {
+                            commands.trigger(Purchase {
+                                upgrade: new_upgrade.clone(),
+                                upgrade_button_entity: button_entity,
+                            });
+                        })),
+                    );
+                });
 
             indices_to_remove.push(index);
         }
@@ -238,12 +242,8 @@ fn on_purchase(
 
 fn upgrade_text(upgrade: &Upgrade) -> impl Into<String> {
     let description = match upgrade.upgrade_kind {
-        UpgradeKind::None => {
-            "Errmm.. This shouldn't be for sale"
-        },
-        UpgradeKind::AddSocket(upgrade) => {
-            "Add a socket"
-        },
+        UpgradeKind::None => "Errmm.. This shouldn't be for sale",
+        UpgradeKind::AddSocket(upgrade) => "Add a socket",
     };
     format!("${} | {}", upgrade.cost, description)
 }

@@ -1,6 +1,13 @@
 //! The title screen that appears when the game starts.
 
-use bevy::{color::palettes::{css::{BLUE, DARK_GRAY, GRAY, LIGHT_CORAL, LIGHT_CYAN, LIGHT_GRAY, RED}, tailwind::{GRAY_400, GRAY_600, GRAY_700}}, prelude::*, sprite::{MaterialMesh2dBundle, Mesh2dHandle}};
+use bevy::{
+    color::palettes::{
+        css::{BLUE, DARK_GRAY, GRAY, LIGHT_CORAL, LIGHT_CYAN, LIGHT_GRAY, RED},
+        tailwind::{GRAY_400, GRAY_600, GRAY_700},
+    },
+    prelude::*,
+    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
+};
 
 use super::Screen;
 use crate::{game::materials::materials::BackgroundMaterial, ui::prelude::*};

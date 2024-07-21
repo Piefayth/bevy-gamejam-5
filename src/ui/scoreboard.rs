@@ -1,7 +1,10 @@
 use bevy::prelude::*;
 use num_bigint::BigUint;
 
-use crate::{game::spawn::level::Ring, screen::{playing::Currency, Screen}};
+use crate::{
+    game::spawn::level::Ring,
+    screen::{playing::Currency, Screen},
+};
 
 use super::widgets::{CurrencyText, CyclesCountText};
 
@@ -18,7 +21,7 @@ fn update_cycles(
     old_count: Local<BigUint>,
 ) {
     if q_text.is_empty() {
-        return 
+        return;
     }
 
     let mut cycle_count_text = q_text.single_mut();
@@ -32,13 +35,13 @@ fn update_cycles(
     }
 }
 
-fn update_currency(
-    currency: Res<Currency>,
-    mut q_text: Query<&mut Text, With<CurrencyText>>,
-) {
+fn update_currency(currency: Res<Currency>, mut q_text: Query<&mut Text, With<CurrencyText>>) {
     if currency.is_changed() {
         let mut currency_text = q_text.single_mut();
-        
-        currency_text.sections[0].value = format!("${} (Pending ${})", currency.amount, currency.pending_amount);
+
+        currency_text.sections[0].value = format!(
+            "${} (Pending ${})",
+            currency.amount, currency.pending_amount
+        );
     }
 }

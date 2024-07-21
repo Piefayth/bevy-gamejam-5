@@ -1,4 +1,8 @@
-use bevy::{color::palettes::css::{BLACK, WHITE}, input::keyboard::Key, prelude::*};
+use bevy::{
+    color::palettes::css::{BLACK, WHITE},
+    input::keyboard::Key,
+    prelude::*,
+};
 
 use crate::screen::Screen;
 
@@ -11,10 +15,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 }
 
-fn update_hotbar_selection(
-    keys: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Hotbar>,
-) {
+fn update_hotbar_selection(keys: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Hotbar>) {
     for mut hotbar in query.iter_mut() {
         if keys.just_pressed(KeyCode::Digit1) && hotbar.color_mappings.len() > 0 {
             hotbar.selected_index = 0;

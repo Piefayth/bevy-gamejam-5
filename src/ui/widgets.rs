@@ -39,7 +39,7 @@ pub trait Widgets {
     fn cycle_row(&mut self, row: u32) -> EntityCommands;
 
     fn upgrade_shop(&mut self) -> EntityCommands;
-    fn shop_button(&mut self, text: impl Into<String>, font: Handle<Font>) -> EntityCommands; 
+    fn shop_button(&mut self, text: impl Into<String>, font: Handle<Font>) -> EntityCommands;
 
     fn scoreboard_cycles_text(
         &mut self,
@@ -120,21 +120,23 @@ impl<T: Spawn> Widgets for T {
             },
         ));
         entity.with_children(|children| {
-            children.spawn((
-                Name::new("Button Text"),
-                TextBundle::from_section(
-                    text,
-                    TextStyle {
-                        font_size: 16.0,
-                        color: BUTTON_TEXT,
-                        font: font,
-                        ..default()
-                    },
-                ),
-            )).insert(Style {
-                margin: UiRect::all(Px(8.)),
-                ..default()
-            });
+            children
+                .spawn((
+                    Name::new("Button Text"),
+                    TextBundle::from_section(
+                        text,
+                        TextStyle {
+                            font_size: 16.0,
+                            color: BUTTON_TEXT,
+                            font: font,
+                            ..default()
+                        },
+                    ),
+                ))
+                .insert(Style {
+                    margin: UiRect::all(Px(8.)),
+                    ..default()
+                });
         });
         entity
     }

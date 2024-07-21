@@ -58,10 +58,7 @@ impl Plugin for AppPlugin {
         app.add_plugins((game::plugin, screen::plugin, ui::plugin));
 
         // Add 3rd party plugins.
-        app.add_plugins((
-            TweeningPlugin,
-            DefaultPickingPlugins
-        ));
+        app.add_plugins((TweeningPlugin, DefaultPickingPlugins));
 
         // Enable dev tools for dev builds.
         #[cfg(feature = "dev")]

@@ -1,7 +1,9 @@
 use bevy::{
-    prelude::*, render::texture::{ImageLoaderSettings, ImageSampler}, sprite::Material2d, utils::HashMap
+    prelude::*,
+    render::texture::{ImageLoaderSettings, ImageSampler},
+    sprite::Material2d,
+    utils::HashMap,
 };
-
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<HandleMap<ImageKey>>();
@@ -32,8 +34,7 @@ impl AssetKey for ImageKey {
 impl FromWorld for HandleMap<ImageKey> {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.resource::<AssetServer>();
-        []
-        .into()
+        [].into()
     }
 }
 
@@ -116,26 +117,17 @@ impl FromWorld for HandleMap<ShaderKey> {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.resource::<AssetServer>();
         [
+            (ShaderKey::Ring, asset_server.load("shaders/ring.wgsl")),
+            (ShaderKey::Hand, asset_server.load("shaders/hand.wgsl")),
+            (ShaderKey::Socket, asset_server.load("shaders/socket.wgsl")),
             (
-                ShaderKey::Ring,
-                asset_server.load("shaders/ring.wgsl"),
-            ),
-            (
-                ShaderKey::Hand,
-                asset_server.load("shaders/hand.wgsl"),
-            ),
-            (
-                ShaderKey::Socket,
-                asset_server.load("shaders/socket.wgsl"),
+                ShaderKey::UiSocket,
+                asset_server.load("shaders/ui_socket.wgsl"),
             ),
             (
                 ShaderKey::UiSocket,
-                asset_server.load("shaders/ui_socket.wgsl")
+                asset_server.load("shaders/background.wgsl"),
             ),
-            (
-                ShaderKey::UiSocket,
-                asset_server.load("shaders/background.wgsl")
-            )
         ]
         .into()
     }
@@ -144,7 +136,7 @@ impl FromWorld for HandleMap<ShaderKey> {
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Reflect, Default)]
 pub enum FontKey {
     #[default]
-    Default
+    Default,
 }
 
 impl AssetKey for FontKey {
@@ -154,12 +146,11 @@ impl AssetKey for FontKey {
 impl FromWorld for HandleMap<FontKey> {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.resource::<AssetServer>();
-        [
-            (
-                FontKey::Default,
-                asset_server.load("fonts/Goli-Regular.ttf"),
-            )
-        ].into()
+        [(
+            FontKey::Default,
+            asset_server.load("fonts/Goli-Regular.ttf"),
+        )]
+        .into()
     }
 }
 

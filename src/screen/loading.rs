@@ -5,7 +5,7 @@ use bevy::prelude::*;
 
 use super::Screen;
 use crate::{
-    game::assets::{HandleMap, ImageKey, ShaderKey, SfxKey, SoundtrackKey},
+    game::assets::{HandleMap, ImageKey, SfxKey, ShaderKey, SoundtrackKey},
     ui::prelude::*,
 };
 
@@ -31,7 +31,7 @@ fn all_assets_loaded(
     image_handles: Res<HandleMap<ImageKey>>,
     sfx_handles: Res<HandleMap<SfxKey>>,
     soundtrack_handles: Res<HandleMap<SoundtrackKey>>,
-    shader_handles: Res<HandleMap<ShaderKey>>, 
+    shader_handles: Res<HandleMap<ShaderKey>>,
 ) -> bool {
     image_handles.all_loaded(&asset_server)
         && sfx_handles.all_loaded(&asset_server)
