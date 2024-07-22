@@ -22,7 +22,7 @@ env:
   PACKAGE_NAME: piefayth_bevy_jam_5
   # The itch.io page to upload to, in the format: `user-name/project-name`.
   # Comment this out to disable.
-  ITCH_TARGET: piefayth/unnamed_cycle_game
+  ITCH_TARGET: piefayth/unnamed-cycle-game
   # The organization or author that owns the rights to the game.
   OWNER: piefayth
   # The path to the assets directory.

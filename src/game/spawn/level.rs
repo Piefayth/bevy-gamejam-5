@@ -4,8 +4,8 @@ use std::f32::consts::PI;
 
 use bevy::{
     color::palettes::{
-        css::{BLACK, BLUE},
-        tailwind::{GRAY_950},
+        css::{BLACK, BLUE, RED},
+        tailwind::GRAY_950,
     },
     math::VectorSpace,
     prelude::*,
@@ -62,6 +62,7 @@ impl Ring {
             self.cycle_score += match color {
                 SocketColor::NONE => BigUint::ZERO,
                 SocketColor::BLUE => BigUint::from(1u32),
+                SocketColor::RED => BigUint::from(2u32), // no, red is not worth two points; how do we score red LMAO?
             };
         }
     }
@@ -73,11 +74,22 @@ pub struct Hand {
     pub length: f32,
 }
 
-#[derive(Default, PartialEq, Clone, Copy, Debug)]
+#[derive(Default, PartialEq, Eq, Hash, Clone, Copy, Debug)]
 pub enum SocketColor {
     #[default]
     NONE,
     BLUE,
+    RED,
+}
+
+impl SocketColor {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            SocketColor::RED => "RED",
+            SocketColor::NONE => "NONE",
+            SocketColor::BLUE => "BLUE",
+        }
+    }
 }
 
 const RING_QUAD_DIMENSIONS: Vec2 = Vec2::splat(512.);
@@ -251,6 +263,7 @@ pub fn map_socket_color(socket_color: SocketColor) -> LinearRgba {
     match socket_color {
         SocketColor::BLUE => BLUE,
         SocketColor::NONE => GRAY_950,
+        SocketColor::RED => RED,
     }
     .into()
 }

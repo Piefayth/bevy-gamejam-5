@@ -54,11 +54,17 @@ pub struct AddSocketUpgrade {
     level: u32,
 }
 
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub struct AddColorUpgrade {
+    color: SocketColor,
+}
+
 #[derive(Default, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum UpgradeKind {
     #[default]
     None,
     AddSocket(AddSocketUpgrade),
+    AddColor(AddColorUpgrade)
 }
 
 #[derive(Default, PartialEq, Eq, Hash, Clone)]
@@ -75,6 +81,13 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
         UpgradeKind::None => BigUint::ZERO,
         UpgradeKind::AddSocket(upgrade) => {
             base_add_socket_cost.pow((upgrade.level as f32 * add_socket_scale_factor) as u32)
+        },
+        UpgradeKind::AddColor(upgrade) => {
+            match upgrade.color {
+                SocketColor::NONE => panic!("No such upgrade for baseline Socket Color NONE"),
+                SocketColor::BLUE => panic!("No such upgrade for baseline Socket Color BLUE"),
+                SocketColor::RED => BigUint::from(60u32),
+            }
         }
     }
 }
@@ -86,6 +99,7 @@ fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: R
     // define every unlock
 
     unlocks.0 = add_socket_unlocks();
+    unlocks.0.extend(add_color_unlocks());
 
     let parent = trigger.event().parent;
     commands.entity(parent).with_children(|gameplay_parent| {
@@ -123,6 +137,15 @@ fn add_socket_unlocks() -> Vec<Unlock> {
             }
         })
         .collect()
+}
+
+fn add_color_unlocks() -> Vec<Unlock> {
+    vec![
+        Unlock {
+            when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: 2 })],
+            then: UpgradeKind::AddColor(AddColorUpgrade { color: SocketColor::RED})
+        },
+    ]
 }
 
 #[derive(Default, Resource)]
@@ -204,6 +227,9 @@ fn on_purchase(
                         ring.sockets.push(new_socket_entity);
                     });
             }
+        },
+        UpgradeKind::AddColor(color_upgrade) => {
+            println!("color upgrade {:?}", color_upgrade.color);
         }
     }
 
@@ -254,7 +280,8 @@ fn on_purchase(
 fn upgrade_text(upgrade: &Upgrade) -> impl Into<String> {
     let description = match upgrade.upgrade_kind {
         UpgradeKind::None => "Errmm.. This shouldn't be for sale",
-        UpgradeKind::AddSocket(upgrade) => "Add a socket",
+        UpgradeKind::AddSocket(_) => "Add a socket",
+        UpgradeKind::AddColor(upgrade) => &format!("Add {} orbs", upgrade.color.as_str())
     };
     format!("${} | {}", upgrade.cost, description)
 }
