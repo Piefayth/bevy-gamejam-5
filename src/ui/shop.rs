@@ -83,16 +83,9 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
 struct UpgradeButtonsContainer;
 
 fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: ResMut<Unlocks>) {
-    unlocks.0 = vec![
-        Unlock {
-            when: vec![],
-            then: UpgradeKind::AddSocket(AddSocketUpgrade { level: 1 }),
-        },
-        Unlock {
-            when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: 1 })],
-            then: UpgradeKind::AddSocket(AddSocketUpgrade { level: 2 }),
-        },
-    ];
+    // define every unlock
+
+    unlocks.0 = add_socket_unlocks();
 
     let parent = trigger.event().parent;
     commands.entity(parent).with_children(|gameplay_parent| {
@@ -112,6 +105,24 @@ fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: R
         },
         upgrade_button_entity: Entity::PLACEHOLDER,
     })
+}
+
+fn add_socket_unlocks() -> Vec<Unlock> {
+    (0..10).collect::<Vec<usize>>().iter()
+        .map(|elem| {
+            if *elem == 0 {
+                Unlock {
+                    when: vec![],
+                    then: UpgradeKind::AddSocket(AddSocketUpgrade { level: 1 }),
+                }
+            } else {
+                Unlock {
+                    when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: *elem as u32 })],
+                    then: UpgradeKind::AddSocket(AddSocketUpgrade { level: *elem  as u32 + 1 }),
+                }
+            }
+        })
+        .collect()
 }
 
 #[derive(Default, Resource)]
