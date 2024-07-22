@@ -7,10 +7,7 @@ use bevy::{
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct RingMaterial {
     #[uniform(0)]
-    pub radius: f32,
-
-    #[uniform(1)]
-    pub thickness: f32,
+    pub data: Vec4, // `radius`, `thickness` and padding
 }
 
 impl Material2d for RingMaterial {
@@ -22,13 +19,7 @@ impl Material2d for RingMaterial {
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct HandMaterial {
     #[uniform(0)]
-    pub width: f32,
-
-    #[uniform(1)]
-    pub height: f32,
-
-    #[uniform(2)]
-    pub rotation_radians: f32,
+    pub data: Vec4, // width, height, rotation_radians, padding
 }
 
 impl Material2d for HandMaterial {

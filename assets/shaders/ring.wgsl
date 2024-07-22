@@ -1,8 +1,7 @@
 #import bevy_sprite::mesh2d_vertex_output::VertexOutput
 #import bevy_sprite::mesh2d_view_bindings::globals
 
-@group(2) @binding(0) var<uniform> radius: f32;
-@group(2) @binding(1) var<uniform> thickness: f32;
+@group(2) @binding(0) var<uniform> data: vec4<f32>;
 
 const BLACK = vec4<f32>(0., 0., 0., 1.);
 const WHITE =  vec4<f32>(1., 1., 1., 1.);
@@ -12,6 +11,9 @@ const EDGE_SIZE = 0.005;
 
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
+    let radius = data[0];
+    let thickness = data[1];
+
     let uv: vec2<f32> = 2.0 * mesh.uv - vec2<f32>(1.0, 1.0);
 
     let ring_visible = circle(uv, radius);

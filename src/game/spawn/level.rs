@@ -127,8 +127,7 @@ fn spawn_level(
             MaterialMesh2dBundle {
                 mesh: gameplay_meshes.quad512.clone(),
                 material: ring_materials.add(RingMaterial {
-                    radius: RING_RADIUS,
-                    thickness: RING_THICKNESS,
+                    data: Vec4::new(RING_RADIUS, RING_THICKNESS, 0., 0.),
                 }),
                 ..default()
             },
@@ -158,9 +157,7 @@ fn spawn_level(
                     MaterialMesh2dBundle {
                         mesh: gameplay_meshes.quad512.clone(),
                         material: hand_materials.add(HandMaterial {
-                            width: hand_length,
-                            height: hand_thickness,
-                            rotation_radians: PI / 2.,
+                            data: Vec4::new(hand_length, hand_thickness, PI / 2., 0.)
                         }),
                         transform: Transform::from_xyz(0., 0., 5.),
                         ..default()

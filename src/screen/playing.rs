@@ -19,7 +19,7 @@ use crate::{
         assets::{FontKey, HandleMap, SoundtrackKey},
         audio::soundtrack::PlaySoundtrack,
         materials::materials::{HandMaterial, SocketMaterial, SocketUiMaterial},
-        spawn::level::{Hand, Ring, Socket, SocketColor, SpawnLevel},
+        spawn::level::{map_socket_color, Hand, Ring, Socket, SocketColor, SpawnLevel},
     },
     ui::shop::NewShop,
 };
@@ -81,8 +81,8 @@ fn enter_playing(
                             .with_children(|hotbar_children| {
                                 hotbar_children.hotbar_button(materials.add(SocketUiMaterial {
                                     bevel_color: BLACK.into(),
-                                    inserted_color: BLUE.into(),
-                                }));
+                                    inserted_color: map_socket_color(SocketColor::BLUE),
+                                }), "1.", 0);  // someday we will have real hotkeys 
                             });
                     });
             });
@@ -110,13 +110,13 @@ fn rotate_hands(
     for (hand_mat_handle, mut hand) in q_hand.iter_mut() {
         let hand_material = materials.get_mut(hand_mat_handle).unwrap();
 
-        //let rotations_per_second = 1. / 5.; // this will change per hand...
-        let rotations_per_second = 1.;
+        let rotations_per_second = 1. / 5.; // this will change per hand...
+        //let rotations_per_second = 5.;
         let rotations_per_second_rad = 2.0 * PI * rotations_per_second;
 
-        hand_material.rotation_radians += rotations_per_second_rad * time.delta_seconds();
-        hand_material.rotation_radians = hand_material.rotation_radians % (2.0 * PI);
-        hand.rotation_radians = hand_material.rotation_radians;
+        hand_material.data[2] += rotations_per_second_rad * time.delta_seconds();
+        hand_material.data[2] = hand_material.data[2] % (2.0 * PI);
+        hand.rotation_radians = hand_material.data[2];
     }
 }
 

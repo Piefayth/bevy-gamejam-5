@@ -57,7 +57,7 @@ pub trait Widgets {
 
     fn hotbar(&mut self, starting_colors: Vec<SocketColor>) -> EntityCommands;
 
-    fn hotbar_button(&mut self, socket_material: Handle<SocketUiMaterial>) -> EntityCommands;
+    fn hotbar_button(&mut self, socket_material: Handle<SocketUiMaterial>, hotkey_text: impl Into<String>, index: u32) -> EntityCommands;
 
     fn socket(&mut self, socket_material: Handle<SocketUiMaterial>) -> EntityCommands;
 }
@@ -392,7 +392,7 @@ impl<T: Spawn> Widgets for T {
         entity
     }
 
-    fn hotbar_button(&mut self, socket_material: Handle<SocketUiMaterial>) -> EntityCommands {
+    fn hotbar_button(&mut self, socket_material: Handle<SocketUiMaterial>, hotkey_text: impl Into<String>, index: u32) -> EntityCommands {
         let mut entity = self.spawn((
             Name::new("HotbarButton"),
             NodeBundle {
@@ -410,7 +410,7 @@ impl<T: Spawn> Widgets for T {
                 border_color: Color::BLACK.into(),
                 ..default()
             },
-            HotbarButton { index: 0 },
+            HotbarButton { index },
         ));
 
         entity.with_children(|hotbar_button| {
@@ -434,7 +434,7 @@ impl<T: Spawn> Widgets for T {
                 .spawn((
                     Name::new("Hotbar Text"),
                     TextBundle::from_section(
-                        "1.",
+                        hotkey_text,
                         TextStyle {
                             font_size: 12.0,
                             color: GRAY_200.into(),

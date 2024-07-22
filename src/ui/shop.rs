@@ -8,7 +8,7 @@ use num_bigint::BigUint;
 use crate::{
     game::{
         assets::{FontKey, HandleMap},
-        materials::materials::SocketMaterial,
+        materials::materials::{SocketMaterial, SocketUiMaterial},
         spawn::level::{
             map_socket_color, socket_position, spawn_socket, GameplayMeshes, Ring, Socket,
             SocketColor,
@@ -18,7 +18,7 @@ use crate::{
     ui::widgets::Widgets,
 };
 
-use super::widgets::UpgradeShop;
+use super::widgets::{Hotbar, UpgradeShop};
 
 pub(super) fn plugin(app: &mut App) {
     // app.add_systems(
@@ -64,7 +64,7 @@ pub enum UpgradeKind {
     #[default]
     None,
     AddSocket(AddSocketUpgrade),
-    AddColor(AddColorUpgrade)
+    AddColor(AddColorUpgrade),
 }
 
 #[derive(Default, PartialEq, Eq, Hash, Clone)]
@@ -81,14 +81,12 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
         UpgradeKind::None => BigUint::ZERO,
         UpgradeKind::AddSocket(upgrade) => {
             base_add_socket_cost.pow((upgrade.level as f32 * add_socket_scale_factor) as u32)
-        },
-        UpgradeKind::AddColor(upgrade) => {
-            match upgrade.color {
-                SocketColor::NONE => panic!("No such upgrade for baseline Socket Color NONE"),
-                SocketColor::BLUE => panic!("No such upgrade for baseline Socket Color BLUE"),
-                SocketColor::RED => BigUint::from(60u32),
-            }
         }
+        UpgradeKind::AddColor(upgrade) => match upgrade.color {
+            SocketColor::NONE => panic!("No such upgrade for baseline Socket Color NONE"),
+            SocketColor::BLUE => panic!("No such upgrade for baseline Socket Color BLUE"),
+            SocketColor::RED => BigUint::from(60u32),
+        },
     }
 }
 
@@ -122,7 +120,9 @@ fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: R
 }
 
 fn add_socket_unlocks() -> Vec<Unlock> {
-    (0..10).collect::<Vec<usize>>().iter()
+    (0..10)
+        .collect::<Vec<usize>>()
+        .iter()
         .map(|elem| {
             if *elem == 0 {
                 Unlock {
@@ -131,8 +131,12 @@ fn add_socket_unlocks() -> Vec<Unlock> {
                 }
             } else {
                 Unlock {
-                    when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: *elem as u32 })],
-                    then: UpgradeKind::AddSocket(AddSocketUpgrade { level: *elem  as u32 + 1 }),
+                    when: vec![UpgradeKind::AddSocket(AddSocketUpgrade {
+                        level: *elem as u32,
+                    })],
+                    then: UpgradeKind::AddSocket(AddSocketUpgrade {
+                        level: *elem as u32 + 1,
+                    }),
                 }
             }
         })
@@ -140,12 +144,12 @@ fn add_socket_unlocks() -> Vec<Unlock> {
 }
 
 fn add_color_unlocks() -> Vec<Unlock> {
-    vec![
-        Unlock {
-            when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: 2 })],
-            then: UpgradeKind::AddColor(AddColorUpgrade { color: SocketColor::RED})
-        },
-    ]
+    vec![Unlock {
+        when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: 2 })],
+        then: UpgradeKind::AddColor(AddColorUpgrade {
+            color: SocketColor::RED,
+        }),
+    }]
 }
 
 #[derive(Default, Resource)]
@@ -161,9 +165,11 @@ fn on_purchase(
     mut upgrade_history: ResMut<UpgradeHistory>,
     mut q_rings: Query<(Entity, &mut Ring)>,
     mut q_sockets: Query<(Entity, &Socket, &mut Transform)>,
+    mut q_hotbar: Query<(Entity, &mut Hotbar)>,
     mut commands: Commands,
     mut currency: ResMut<Currency>,
     mut socket_materials: ResMut<Assets<SocketMaterial>>,
+    mut socket_ui_materials: ResMut<Assets<SocketUiMaterial>>,
     mut unlocks: ResMut<Unlocks>,
     q_upgrade_button_container: Query<Entity, With<UpgradeButtonsContainer>>,
     gameplay_meshes: Res<GameplayMeshes>,
@@ -174,25 +180,26 @@ fn on_purchase(
     // 1. grant what was purchased
 
     let cost = &purchase.upgrade.cost;
+    if cost > &currency.amount {
+        // error event
+        return;
+    }
+
+    currency.amount -= cost;
+
+    if purchase.upgrade.upgrade_kind != UpgradeKind::None {
+        upgrade_history
+            .history
+            .insert(purchase.upgrade.upgrade_kind.clone());
+
+        commands
+            .entity(purchase.upgrade_button_entity)
+            .despawn_recursive();
+    }
 
     match &purchase.upgrade.upgrade_kind {
         UpgradeKind::None => {}
         UpgradeKind::AddSocket(_) => {
-            if cost > &currency.amount {
-                // error event
-                return;
-            }
-
-            upgrade_history
-                .history
-                .insert(purchase.upgrade.upgrade_kind.clone());
-
-            currency.amount -= cost;
-
-            commands
-                .entity(purchase.upgrade_button_entity)
-                .despawn_recursive();
-
             for (ring_entity, mut ring) in q_rings.iter_mut() {
                 let mesh = gameplay_meshes.quad64.clone();
                 let socket_material = socket_materials.add(SocketMaterial {
@@ -227,9 +234,23 @@ fn on_purchase(
                         ring.sockets.push(new_socket_entity);
                     });
             }
-        },
+        }
         UpgradeKind::AddColor(color_upgrade) => {
-            println!("color upgrade {:?}", color_upgrade.color);
+            let (hotbar_entity, mut hotbar) = q_hotbar.single_mut();
+            hotbar.color_mappings.push(color_upgrade.color);
+
+            let socket_ui_material = socket_ui_materials.add(SocketUiMaterial {
+                bevel_color: BLACK.into(),
+                inserted_color: map_socket_color(SocketColor::RED),
+            });
+
+            commands
+                .entity(hotbar_entity)
+                .with_children(|hotbar_children| {
+                    hotbar_children.hotbar_button(socket_ui_material, "2.", 1);
+                });
+            // need to spawn the new hotbar button
+            // so we need to get access to the hotbar i guess?
         }
     }
 
@@ -258,14 +279,14 @@ fn on_purchase(
                     );
                     let button_entity = button_entity_commands.id();
 
-                    button_entity_commands.insert(
-                        On::<Pointer<Click>>::commands_mut(move |_ev, commands| {
+                    button_entity_commands.insert(On::<Pointer<Click>>::commands_mut(
+                        move |_ev, commands| {
                             commands.trigger(Purchase {
                                 upgrade: new_upgrade.clone(),
                                 upgrade_button_entity: button_entity,
                             });
-                        }),
-                    );
+                        },
+                    ));
                 });
 
             indices_to_remove.push(index);
@@ -281,7 +302,7 @@ fn upgrade_text(upgrade: &Upgrade) -> impl Into<String> {
     let description = match upgrade.upgrade_kind {
         UpgradeKind::None => "Errmm.. This shouldn't be for sale",
         UpgradeKind::AddSocket(_) => "Add a socket",
-        UpgradeKind::AddColor(upgrade) => &format!("Add {} orbs", upgrade.color.as_str())
+        UpgradeKind::AddColor(upgrade) => &format!("Add {} orbs", upgrade.color.as_str()),
     };
     format!("${} | {}", upgrade.cost, description)
 }

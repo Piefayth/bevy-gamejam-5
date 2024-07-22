@@ -1,9 +1,7 @@
 #import bevy_sprite::mesh2d_vertex_output::VertexOutput
 #import bevy_sprite::mesh2d_view_bindings::globals
 
-@group(2) @binding(0) var<uniform> width: f32;
-@group(2) @binding(1) var<uniform> height: f32;
-@group(2) @binding(2) var<uniform> rotation_radians: f32;
+@group(2) @binding(0) var<uniform> data: vec4<f32>;
 
 const BLACK = vec4<f32>(0., 0., 0., 1.);
 const WHITE =  vec4<f32>(1., 1., 1., 1.);
@@ -13,6 +11,10 @@ const OUTLINE_THICKNESS = 0.01;
 
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
+    let width = data[0];
+    let height = data[1];
+    let rotation_radians = data[2];
+
     let uv: vec2<f32> = 2.0 * mesh.uv - vec2<f32>(1.0, 1.0);
     let box_translation = vec2<f32>(width, 0.);
 
