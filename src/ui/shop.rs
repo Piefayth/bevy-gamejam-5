@@ -32,30 +32,9 @@ pub(super) fn plugin(app: &mut App) {
     app.init_resource::<UpgradeHistory>();
 }
 
-#[derive(Resource, Default, PartialEq)]
-struct UpgradeHistory {
+#[derive(Resource, Default, PartialEq, Clone)]
+pub struct UpgradeHistory {
     pub history: HashSet<UpgradeKind>,
-}
-
-#[derive(Event)]
-pub struct NewShop {
-    pub parent: Entity,
-}
-
-#[derive(Event)]
-pub struct Purchase {
-    pub upgrade: Upgrade,
-    pub upgrade_button_entity: Entity,
-}
-
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub struct AddSocketUpgrade {
-    level: u32,
-}
-
-#[derive(PartialEq, Eq, Hash, Clone, Copy)]
-pub struct AddColorUpgrade {
-    color: SocketColor,
 }
 
 #[derive(Default, PartialEq, Eq, Hash, Clone, Copy)]
@@ -71,6 +50,30 @@ pub struct Upgrade {
     upgrade_kind: UpgradeKind,
     cost: BigUint,
 }
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub struct AddSocketUpgrade {
+    level: u32,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub struct AddColorUpgrade {
+    color: SocketColor,
+}
+
+
+#[derive(Event)]
+pub struct NewShop {
+    pub parent: Entity,
+}
+
+#[derive(Event)]
+pub struct Purchase {
+    pub upgrade: Upgrade,
+    pub upgrade_button_entity: Entity,
+}
+
+
 
 fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
     match upgrade_kind {

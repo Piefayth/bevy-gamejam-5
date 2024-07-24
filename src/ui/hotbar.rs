@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{game::{materials::materials::SocketUiMaterial, spawn::level::{map_socket_color, SocketColor}}, screen::Screen};
 
-use super::widgets::{Hotbar, HotbarButton, HotbarDescriptionIcon, HotbarDescriptionText};
+use super::{shop::UpgradeHistory, widgets::{Hotbar, HotbarButton, HotbarDescriptionIcon, HotbarDescriptionText}};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -45,8 +45,8 @@ fn update_hotbar_text(
     q_hotbar: Query<&Hotbar, Changed<Hotbar>>,
     mut q_hotbar_text: Query<&mut Text, With<HotbarDescriptionText>>,
     mut socket_ui_materials: ResMut<Assets<SocketUiMaterial>>,
-    mut q_hotbar_description_icon: Query<(&Handle<SocketUiMaterial>, &mut HotbarDescriptionIcon)>
-
+    mut q_hotbar_description_icon: Query<(&Handle<SocketUiMaterial>, &mut HotbarDescriptionIcon)>,
+    upgrade_history: Res<UpgradeHistory>,
 ) {
     if q_hotbar.is_empty() {
         return;
@@ -57,7 +57,7 @@ fn update_hotbar_text(
     let (icon_mat_handle, mut hotbar_icon) = q_hotbar_description_icon.single_mut();
     
     hotbar_icon.current_socket_color = hotbar.color_mappings[hotbar.selected_index as usize];
-    hotbar_text.sections[0].value = map_socket_color_description_text(hotbar_icon.current_socket_color);
+    hotbar_text.sections[0].value = map_socket_color_description_text(hotbar_icon.current_socket_color, &upgrade_history);
 
 
     let socket_ui_material = socket_ui_materials.get_mut(icon_mat_handle).expect("HotbarDescriptionIcon should've had a SocketUiMaterial");
@@ -65,10 +65,10 @@ fn update_hotbar_text(
     socket_ui_material.inserted_color = map_socket_color(hotbar_icon.current_socket_color);
 }
 
-pub fn map_socket_color_description_text(socket_color: SocketColor) -> String {
+pub fn map_socket_color_description_text(socket_color: SocketColor, upgrade_history: &UpgradeHistory) -> String {
     match socket_color {
         SocketColor::NONE => String::from("???"),
-        SocketColor::BLUE => format!("Slots into a socket. Grants one $ every time it is triggered."),
+        SocketColor::BLUE => format!("Slots into a socket. Grants {} $ every time it is triggered.", 1.),
         SocketColor::RED => format!("Grants no $. Triggers adjacent sockets when triggered."),
     }
 }

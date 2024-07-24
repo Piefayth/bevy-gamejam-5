@@ -22,7 +22,10 @@ use crate::{
             socket_position, GameplayMeshes, Ring, Socket, SocketColor, SpawnLevel,
         },
     },
-    ui::{hotbar::map_socket_color_description_text, shop::NewShop},
+    ui::{
+        hotbar::map_socket_color_description_text,
+        shop::{NewShop, UpgradeHistory},
+    },
 };
 
 use crate::ui::prelude::*;
@@ -60,6 +63,7 @@ fn enter_playing(
     mut commands: Commands,
     mut materials: ResMut<Assets<SocketUiMaterial>>,
     font_handles: ResMut<HandleMap<FontKey>>,
+    upgrade_history: Res<UpgradeHistory>,
 ) {
     commands.trigger(SpawnLevel);
     commands.trigger(PlaySoundtrack::Key(SoundtrackKey::Gameplay));
@@ -103,6 +107,7 @@ fn enter_playing(
                                 hotbar_wrapper_children.hotbar_description(
                                     map_socket_color_description_text(
                                         hotbar_first_position_socket_color,
+                                        &upgrade_history,
                                     ),
                                     hotbar_first_position_socket_color,
                                     font_handles[&FontKey::Default].clone(),
@@ -518,16 +523,13 @@ fn progress_cycle(
             });
         }
 
-        let seconds_since_cycle_start = time.elapsed_seconds() - ring.cycle_start_seconds; // rebind these intentionally to update them
-        let cycle_time_remaining = ring.cycle_duration - seconds_since_cycle_start;
-
         let progress_pct = 1. - cycle_time_remaining / ring.cycle_duration;
 
         let ring_mat = ring_materials
             .get_mut(ring_mat_handle)
             .expect("Ring should've had a RingMaterial.");
         ring_mat.data[2] = progress_pct;
-
+        
         for socket_entity in &ring.sockets {
             let (socket_entity, socket, _t) = q_socket
                 .get(*socket_entity)
@@ -535,7 +537,7 @@ fn progress_cycle(
             let socket_position_pct =
                 (ring.sockets.len() as f32 - socket.index as f32) / ring.sockets.len() as f32;
 
-            if (*old_progress_pct < socket_position_pct && socket_position_pct < progress_pct)
+            if (*old_progress_pct <= socket_position_pct && socket_position_pct <= progress_pct)
                 || (socket_position_pct == 1. && *old_progress_pct > progress_pct)
             {
                 commands.trigger(SocketTriggered {

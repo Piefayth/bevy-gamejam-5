@@ -61,26 +61,26 @@ jobs:
             package_ext: .zip
             runner: ubuntu-latest
 
-          - platform: linux
-            targets: x86_64-unknown-linux-gnu
-            profile: release-native
-            features: bevy/wayland
-            package_ext: .zip
-            runner: ubuntu-latest
+          # - platform: linux
+          #   targets: x86_64-unknown-linux-gnu
+          #   profile: release-native
+          #   features: bevy/wayland
+          #   package_ext: .zip
+          #   runner: ubuntu-latest
 
-          - platform: windows
-            targets: x86_64-pc-windows-msvc
-            profile: release-native
-            binary_ext: .exe
-            package_ext: .zip
-            runner: windows-latest
+          # - platform: windows
+          #   targets: x86_64-pc-windows-msvc
+          #   profile: release-native
+          #   binary_ext: .exe
+          #   package_ext: .zip
+          #   runner: windows-latest
 
-          - platform: macos
-            targets: x86_64-apple-darwin aarch64-apple-darwin
-            profile: release-native
-            out_dir_suffix: .app/Contents/MacOS
-            package_ext: .dmg
-            runner: macos-latest
+          # - platform: macos
+          #   targets: x86_64-apple-darwin aarch64-apple-darwin
+          #   profile: release-native
+          #   out_dir_suffix: .app/Contents/MacOS
+          #   package_ext: .dmg
+          #   runner: macos-latest
     runs-on: ${{ matrix.runner }}
     defaults:
       run:
@@ -197,23 +197,23 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path '${{ env.PACKAGE_NAME }}' -DestinationPath '${{ env.PACKAGE }}${{ matrix.package_ext }}'
 
-      - name: Upload package to artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          path: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
-          name: package-${{ matrix.platform }}
-          retention-days: 1
+      # - name: Upload package to artifacts
+      #   uses: actions/upload-artifact@v3
+      #   with:
+      #     path: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
+      #     name: package-${{ matrix.platform }}
+      #     retention-days: 1
 
-      - name: Upload package to Github release
-        if: ${{ env.UPLOAD_PACKAGES_TO_GITHUB_RELEASE == 'true' }}
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
-          asset_name: ${{ env.PACKAGE }}${{ matrix.package_ext }}
-          release_name: ${{ env.VERSION }}
-          tag: ${{ env.VERSION }}
-          overwrite: true
+      # - name: Upload package to Github release
+      #   if: ${{ env.UPLOAD_PACKAGES_TO_GITHUB_RELEASE == 'true' }}
+      #   uses: svenstaro/upload-release-action@v2
+      #   with:
+      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
+      #     file: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
+      #     asset_name: ${{ env.PACKAGE }}${{ matrix.package_ext }}
+      #     release_name: ${{ env.VERSION }}
+      #     tag: ${{ env.VERSION }}
+      #     overwrite: true
 
   # Get itch.io target from env, because the `env` context can't be used in the `if:` condition of a job.
   # See: https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
@@ -237,7 +237,7 @@ jobs:
     if: ${{ needs.get-itch-target.outputs.itch-target != '' }}
     steps:
       - name: Download all packages
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v3
         with:
           pattern: package-*
           path: tmp
