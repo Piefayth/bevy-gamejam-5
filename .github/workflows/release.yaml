@@ -197,23 +197,23 @@ jobs:
         shell: pwsh
         run: Compress-Archive -Path '${{ env.PACKAGE_NAME }}' -DestinationPath '${{ env.PACKAGE }}${{ matrix.package_ext }}'
 
-      # - name: Upload package to artifacts
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     path: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
-      #     name: package-${{ matrix.platform }}
-      #     retention-days: 1
+      - name: Upload package to artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          path: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
+          name: package-${{ matrix.platform }}
+          retention-days: 1
 
-      # - name: Upload package to Github release
-      #   if: ${{ env.UPLOAD_PACKAGES_TO_GITHUB_RELEASE == 'true' }}
-      #   uses: svenstaro/upload-release-action@v2
-      #   with:
-      #     repo_token: ${{ secrets.GITHUB_TOKEN }}
-      #     file: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
-      #     asset_name: ${{ env.PACKAGE }}${{ matrix.package_ext }}
-      #     release_name: ${{ env.VERSION }}
-      #     tag: ${{ env.VERSION }}
-      #     overwrite: true
+      - name: Upload package to Github release
+        if: ${{ env.UPLOAD_PACKAGES_TO_GITHUB_RELEASE == 'true' }}
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
+          asset_name: ${{ env.PACKAGE }}${{ matrix.package_ext }}
+          release_name: ${{ env.VERSION }}
+          tag: ${{ env.VERSION }}
+          overwrite: true
 
   # Get itch.io target from env, because the `env` context can't be used in the `if:` condition of a job.
   # See: https://docs.github.com/en/actions/learn-github-actions/contexts#context-availability
