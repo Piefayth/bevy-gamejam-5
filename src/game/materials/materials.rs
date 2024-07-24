@@ -17,24 +17,18 @@ impl Material2d for RingMaterial {
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
-pub struct HandMaterial {
-    #[uniform(0)]
-    pub data: Vec4, // width, height, rotation_radians, padding
-}
-
-impl Material2d for HandMaterial {
-    fn fragment_shader() -> ShaderRef {
-        "shaders/hand.wgsl".into()
-    }
-}
-
-#[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct SocketMaterial {
     #[uniform(0)]
     pub inserted_color: LinearRgba,
 
     #[uniform(1)]
     pub bevel_color: LinearRgba,
+
+    #[uniform(2)]
+    pub highlight_color: LinearRgba,
+
+    #[uniform(3)]
+    pub data: Vec4 // [start time seconds, trigger_duration, padding, padding]
 }
 
 impl Material2d for SocketMaterial {

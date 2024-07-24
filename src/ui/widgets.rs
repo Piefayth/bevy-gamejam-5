@@ -2,7 +2,7 @@
 
 use bevy::{
     color::palettes::{
-        css::{BLUE, GREEN, LIGHT_CYAN, MAGENTA, ORANGE, PURPLE, RED},
+        css::{BLUE, GREEN, LIGHT_CYAN, MAGENTA, ORANGE, PURPLE, RED, WHITE},
         tailwind::{GRAY_100, GRAY_200},
     },
     ecs::system::EntityCommands,
@@ -34,10 +34,6 @@ pub trait Widgets {
 
     fn vertical_container(&mut self, justify_content: JustifyContent) -> EntityCommands;
 
-    fn cycle_display(&mut self) -> EntityCommands;
-
-    fn cycle_row(&mut self, row: u32) -> EntityCommands;
-
     fn upgrade_shop(&mut self) -> EntityCommands;
     fn shop_button(&mut self, text: impl Into<String>, font: Handle<Font>) -> EntityCommands;
 
@@ -54,6 +50,8 @@ pub trait Widgets {
     ) -> EntityCommands;
 
     fn score_display(&mut self, font: Handle<Font>) -> EntityCommands;
+    
+    fn hotbar_description(&mut self, starting_text: impl Into<String>, socket_color: SocketColor, font: Handle<Font>, socket_material: Handle<SocketUiMaterial>) -> EntityCommands;
 
     fn hotbar(&mut self, starting_colors: Vec<SocketColor>) -> EntityCommands;
 
@@ -349,6 +347,10 @@ impl<T: Spawn> Widgets for T {
                 },
                 ..default()
             },
+            Pickable {
+                should_block_lower: false,
+                is_hoverable: false,
+            },
         ));
 
         entity.with_children(|score_display| {
@@ -388,6 +390,63 @@ impl<T: Spawn> Widgets for T {
                 is_hoverable: false,
             },
         ));
+
+        entity
+    }
+
+    fn hotbar_description(&mut self, starting_text: impl Into<String>, socket_color: SocketColor, font: Handle<Font>, socket_material: Handle<SocketUiMaterial>) -> EntityCommands {
+        let mut entity = self.spawn((
+            Name::new("HotbarDescription"),
+            NodeBundle {
+                style: Style {
+                    display: Display::Flex,
+                    align_items: AlignItems::Center,
+                    margin: UiRect::left(Px(8.)),
+                    ..default()
+                },
+                ..default()
+            },
+            HotbarDescription,
+            Pickable {
+                should_block_lower: false,
+                is_hoverable: false,
+            },
+        ));
+
+        entity.with_children(|children| {
+            children.spawn((
+                Name::new("HotbarDescriptionIcon"),
+                MaterialNodeBundle {
+                    style: Style {
+                        width: Px(16.),
+                        height: Px(16.),
+                        bottom: Px(1.),
+                        left: Px(8.),
+                        margin: UiRect::right(Px(16.)),
+                        ..default()
+                    },
+                    material: socket_material,
+                    ..default()
+                },
+                HotbarDescriptionIcon {
+                    current_socket_color: socket_color,
+                }
+            ));
+
+            children.spawn((
+                Name::new("HotbarDescriptionText"),
+                TextBundle::from_section(
+                    starting_text,
+                    TextStyle {
+                        font,
+                        font_size: 16.0,
+                        color: WHITE.into(),
+                        ..default()
+                    },
+                ),
+                HotbarDescriptionText
+            ));
+        });
 
         entity
     }
@@ -457,36 +516,6 @@ impl<T: Spawn> Widgets for T {
         entity
     }
 
-    fn cycle_display(&mut self) -> EntityCommands {
-        let entity = self.spawn((
-            Name::new("CycleDisplay"),
-            NodeBundle {
-                style: Style { ..default() },
-                background_color: GREEN.into(),
-
-                ..default()
-            },
-            CycleDisplay,
-        ));
-
-        entity
-    }
-
-    fn cycle_row(&mut self, row: u32) -> EntityCommands {
-        let entity = self.spawn((
-            Name::new("CycleRow"),
-            NodeBundle {
-                style: Style { ..default() },
-                background_color: BLUE.into(),
-
-                ..default()
-            },
-            CycleRow { row_number: row },
-        ));
-
-        entity
-    }
-
     fn socket(&mut self, socket_material: Handle<SocketUiMaterial>) -> EntityCommands {
         let entity = self.spawn(
             MaterialNodeBundle {
@@ -511,9 +540,6 @@ pub struct CyclesCountText;
 pub struct CurrencyText;
 
 #[derive(Component)]
-pub struct CycleDisplay;
-
-#[derive(Component)]
 pub struct CycleRow {
     row_number: u32,
 }
@@ -522,6 +548,17 @@ pub struct CycleRow {
 pub struct Hotbar {
     pub selected_index: u32,
     pub color_mappings: Vec<SocketColor>,
+}
+
+#[derive(Component)]
+pub struct HotbarDescription;
+
+#[derive(Component)]
+pub struct HotbarDescriptionText;
+
+#[derive(Component)]
+pub struct HotbarDescriptionIcon {
+    pub current_socket_color: SocketColor,
 }
 
 #[derive(Component)]

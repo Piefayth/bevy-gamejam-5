@@ -4,8 +4,8 @@ use std::f32::consts::PI;
 
 use bevy::{
     color::palettes::{
-        css::{BLACK, BLUE, RED},
-        tailwind::GRAY_950,
+        css::{BLACK, BLUE, RED, WHITE},
+        tailwind::{BLUE_400, BLUE_600, GRAY_900, GRAY_950, RED_400, RED_600},
     },
     math::VectorSpace,
     prelude::*,
@@ -20,8 +20,7 @@ use bevy_mod_picking::{
 use num_bigint::BigUint;
 
 use crate::{
-    game::materials::materials::{HandMaterial, RingMaterial, SocketMaterial},
-    ui::widgets::{CycleDisplay, Hotbar},
+    game::materials::materials::{RingMaterial, SocketMaterial}, screen::playing::{Currency, CycleBonus}, ui::widgets::Hotbar
 };
 
 pub(super) fn plugin(app: &mut App) {
@@ -35,11 +34,15 @@ pub(super) fn plugin(app: &mut App) {
 pub struct GameplayMeshes {
     pub quad512: Mesh2dHandle,
     pub quad64: Mesh2dHandle,
+    pub quad32: Mesh2dHandle,
+    pub quad16: Mesh2dHandle,
 }
 
-fn prepare_meshes(mut meshes: ResMut<Assets<Mesh>>, mut gamemplay_meshes: ResMut<GameplayMeshes>) {
-    gamemplay_meshes.quad512 = Mesh2dHandle(meshes.add(Rectangle::from_size(Vec2::splat(512.))));
-    gamemplay_meshes.quad64 = Mesh2dHandle(meshes.add(Rectangle::from_size(Vec2::splat(64.))));
+fn prepare_meshes(mut meshes: ResMut<Assets<Mesh>>, mut gameplay_meshes: ResMut<GameplayMeshes>) {
+    gameplay_meshes.quad512 = Mesh2dHandle(meshes.add(Rectangle::from_size(Vec2::splat(512.))));
+    gameplay_meshes.quad64 = Mesh2dHandle(meshes.add(Rectangle::from_size(Vec2::splat(64.))));
+    gameplay_meshes.quad32 = Mesh2dHandle(meshes.add(Rectangle::from_size(Vec2::splat(32.))));
+    gameplay_meshes.quad16 = Mesh2dHandle(meshes.add(Rectangle::from_size(Vec2::splat(16.))));
 }
 
 #[derive(Event, Debug)]
@@ -48,30 +51,14 @@ pub struct SpawnLevel;
 #[derive(Component, Default)]
 pub struct Ring {
     pub cycle: Vec<SocketColor>,
+    pub previous_cycle: Vec<SocketColor>,
+    pub previous_bonuses: Vec<CycleBonus>,
+    pub cycle_start_seconds: f32,
+    pub cycle_duration: f32,
     pub cycle_score: BigUint,
     pub cycle_count: BigUint,
     pub sockets: Vec<Entity>,
-    pub hands: Vec<Entity>,
-}
-
-impl Ring {
-    pub fn score(&mut self) {
-        self.cycle_score = BigUint::ZERO;
-
-        for color in &self.cycle {
-            self.cycle_score += match color {
-                SocketColor::NONE => BigUint::ZERO,
-                SocketColor::BLUE => BigUint::from(1u32),
-                SocketColor::RED => BigUint::from(2u32), // no, red is not worth two points; how do we score red LMAO?
-            };
-        }
-    }
-}
-
-#[derive(Component, Default)]
-pub struct Hand {
-    pub rotation_radians: f32,
-    pub length: f32,
+    pub cycle_display_panels: Vec<Entity>,
 }
 
 #[derive(Default, PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -101,29 +88,34 @@ const DEFAULT_SOCKET_RADIUS: f32 = 32.;
 pub struct Socket {
     pub color: SocketColor,
     pub radius: f32,
-    pub hand: Entity,
     pub ring: Entity,
-    pub triggered: bool,
     pub index: usize,
+    pub last_triggered_time_seconds: f32,
+    pub trigger_duration_seconds: f32,
 }
 
 fn spawn_level(
     _trigger: Trigger<SpawnLevel>,
     mut commands: Commands,
     mut ring_materials: ResMut<Assets<RingMaterial>>,
-    mut hand_materials: ResMut<Assets<HandMaterial>>,
     mut socket_materials: ResMut<Assets<SocketMaterial>>,
     meshes: ResMut<Assets<Mesh>>,
     gameplay_meshes: Res<GameplayMeshes>,
-    q_ui_cycle_display: Query<Entity, With<CycleDisplay>>,
+    mut currency: ResMut<Currency>,
+    time: Res<Time>,
 ) {
-    // this is being triggered from the playing screen
-
-    // spawn a quad and lets put a shader on it
+    if cfg!(feature = "dev") {
+        let large_number_str = "0";
+        let large_number = BigUint::parse_bytes(large_number_str.as_bytes(), 10)
+            .expect("Failed to parse big number");
+        currency.amount = large_number;
+    }
 
     let ring_entity = commands
         .spawn((
-            Ring { ..default() },
+            Ring {
+                ..default() 
+            },
             MaterialMesh2dBundle {
                 mesh: gameplay_meshes.quad512.clone(),
                 material: ring_materials.add(RingMaterial {
@@ -139,40 +131,14 @@ fn spawn_level(
         .id();
 
     let mut starting_sockets: Vec<Entity> = vec![];
-    let mut hand_entity: Entity = Entity::PLACEHOLDER;
 
     commands
         .entity(ring_entity)
         .with_children(|ring_entity_children| {
-            let hand_thickness = 10. / 512.;
-            let hand_length = 0.5;
-
-            hand_entity = ring_entity_children
-                .spawn((
-                    Name::new("Hand"),
-                    Hand {
-                        length: hand_length,
-                        ..default()
-                    },
-                    MaterialMesh2dBundle {
-                        mesh: gameplay_meshes.quad512.clone(),
-                        material: hand_materials.add(HandMaterial {
-                            data: Vec4::new(hand_length, hand_thickness, PI / 2., 0.)
-                        }),
-                        transform: Transform::from_xyz(0., 0., 5.),
-                        ..default()
-                    },
-                    Pickable {
-                        should_block_lower: false,
-                        is_hoverable: false,
-                    },
-                ))
-                .id();
-
             let num_points = 2; // how many sockets to start with
 
             for i in 0..num_points {
-                let socket_color = if i == 0 {
+                let socket_color = if i == 1 {
                     SocketColor::BLUE
                 } else {
                     SocketColor::NONE
@@ -181,13 +147,14 @@ fn spawn_level(
                 let socket_entity = spawn_socket(
                     ring_entity_children,
                     socket_color.clone(),
-                    hand_entity,
                     ring_entity,
                     i,
                     gameplay_meshes.quad64.clone(),
                     socket_materials.add(SocketMaterial {
                         inserted_color: map_socket_color(socket_color),
+                        highlight_color: map_socket_highlight_color(socket_color),
                         bevel_color: { BLACK.into() },
+                        data: Vec4::new(-1., map_socket_color_trigger_duration(socket_color), 0., 0.)
                     }),
                     socket_position(i, num_points).extend(1.),
                 );
@@ -198,7 +165,8 @@ fn spawn_level(
 
     commands.entity(ring_entity).insert(Ring {
         sockets: starting_sockets,
-        hands: vec![hand_entity],
+        cycle_duration: 4.,
+        cycle_start_seconds: time.elapsed_seconds(),
         ..default()
     });
 }
@@ -215,7 +183,6 @@ pub fn socket_position(index: usize, num_points: usize) -> Vec2 {
 pub fn spawn_socket(
     commands: &mut ChildBuilder,
     color: SocketColor,
-    hand: Entity,
     ring: Entity,
     index: usize,
     mesh: Mesh2dHandle,
@@ -227,11 +194,11 @@ pub fn spawn_socket(
             Name::new("Socket"),
             Socket {
                 color,
-                hand,
                 ring,
-                triggered: false,
                 index,
                 radius: DEFAULT_SOCKET_RADIUS,
+                last_triggered_time_seconds: -1.,
+                trigger_duration_seconds: map_socket_color_trigger_duration(color),
             },
             MaterialMesh2dBundle {
                 mesh,
@@ -258,9 +225,27 @@ pub fn spawn_socket(
 
 pub fn map_socket_color(socket_color: SocketColor) -> LinearRgba {
     match socket_color {
-        SocketColor::BLUE => BLUE,
+        SocketColor::BLUE => BLUE_600,
         SocketColor::NONE => GRAY_950,
-        SocketColor::RED => RED,
+        SocketColor::RED => RED_600,
+    }
+    .into()
+}
+
+pub fn map_socket_color_trigger_duration(socket_color: SocketColor) -> f32 {
+    match socket_color {
+        SocketColor::BLUE => 0.5,
+        SocketColor::NONE => 0.,
+        SocketColor::RED => 3.,
+    }
+    .into()
+}
+
+pub fn map_socket_highlight_color(socket_color: SocketColor) -> LinearRgba {
+    match socket_color {
+        SocketColor::BLUE => BLUE_400,
+        SocketColor::NONE => GRAY_900,
+        SocketColor::RED => RED_400,
     }
     .into()
 }
@@ -276,6 +261,7 @@ fn on_set_socket_color(
     mut q_sockets: Query<(&mut Socket, &Handle<SocketMaterial>)>,
     mut materials: ResMut<Assets<SocketMaterial>>,
     q_hotbar: Query<&Hotbar>,
+    time: Res<Time>
 ) {
     let hotbar = q_hotbar.single();
     let selected_color = hotbar.color_mappings[hotbar.selected_index as usize];
@@ -289,7 +275,31 @@ fn on_set_socket_color(
         selected_color
     };
 
-    material.inserted_color = map_socket_color(new_color);
+    let cooldown_remaining = (socket.last_triggered_time_seconds + socket.trigger_duration_seconds) - time.elapsed_seconds();
 
+    let old_trigger_duration = socket.trigger_duration_seconds;
+    let new_trigger_duration = map_socket_color_trigger_duration(selected_color);
+
+    material.inserted_color = map_socket_color(new_color);
+    material.highlight_color = map_socket_highlight_color(new_color);
+
+    if cooldown_remaining > 0. {
+        if new_trigger_duration < old_trigger_duration  {
+            material.data[0] = time.elapsed_seconds() + cooldown_remaining;
+            socket.last_triggered_time_seconds = time.elapsed_seconds() + cooldown_remaining;
+        } else {
+            material.data[0] = time.elapsed_seconds() + cooldown_remaining - (new_trigger_duration - old_trigger_duration);
+            socket.last_triggered_time_seconds = time.elapsed_seconds() + cooldown_remaining - (new_trigger_duration - old_trigger_duration);
+        }
+    } else {
+        socket.last_triggered_time_seconds = 0.;
+        material.data[0] = 0.;
+
+    }
+
+    material.data[1] = new_trigger_duration;
+    socket.trigger_duration_seconds = new_trigger_duration;
+    
     socket.color = new_color;
+    
 }

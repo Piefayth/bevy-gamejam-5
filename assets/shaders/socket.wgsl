@@ -3,6 +3,8 @@
 
 @group(2) @binding(0) var<uniform> inserted_color: vec4<f32>;
 @group(2) @binding(1) var<uniform> bevel_color: vec4<f32>;
+@group(2) @binding(2) var<uniform> highlight_color: vec4<f32>;
+@group(2) @binding(3) var<uniform> data: vec4<f32>; // start_time_seconds, trigger_duration_seconds, padding, padding
 
 const BLACK = vec4<f32>(0., 0., 0., 1.);
 const WHITE =  vec4<f32>(1., 1., 1., 1.);
@@ -12,6 +14,15 @@ const THICKNESS = 0.1;
 
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
+    let start_time = data[0];
+    let now = globals.time;
+    let trigger_duration = data[1];
+
+    var elapsed = now - start_time;
+    elapsed -= trigger_duration * 0.075;  // keep them lit a little longer to prevent hits that LOOK like theyll trigger that dont
+
+    let progress = clamp(elapsed / trigger_duration, 0.0, 1.0);
+
     let uv: vec2<f32> = 2.0 * mesh.uv - vec2<f32>(1.0, 1.0);
     
     let bevel_radius = 1.0 - EDGE_SIZE;
@@ -29,7 +40,11 @@ fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
 
     // second mix, are we in the inner socket?
 
-    final_color = mix(inserted_color, final_color, smooth_socket);
+    if (uv.y < 2.0 * progress - 1.0) {
+        final_color = mix(inserted_color, final_color, smooth_socket);
+    } else {
+        final_color = mix(highlight_color, final_color, smooth_socket);
+    }
 
     return final_color;
     

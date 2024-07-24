@@ -10,8 +10,7 @@ use crate::{
         assets::{FontKey, HandleMap},
         materials::materials::{SocketMaterial, SocketUiMaterial},
         spawn::level::{
-            map_socket_color, socket_position, spawn_socket, GameplayMeshes, Ring, Socket,
-            SocketColor,
+            map_socket_color, map_socket_highlight_color, socket_position, spawn_socket, GameplayMeshes, Ring, Socket, SocketColor
         },
     },
     screen::{playing::Currency, Screen},
@@ -74,20 +73,27 @@ pub struct Upgrade {
 }
 
 fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
-    let base_add_socket_cost = BigUint::from(5u32);
-    let add_socket_scale_factor = 1.1;
-
     match upgrade_kind {
         UpgradeKind::None => BigUint::ZERO,
         UpgradeKind::AddSocket(upgrade) => {
-            base_add_socket_cost.pow((upgrade.level as f32 * add_socket_scale_factor) as u32)
+            let base_add_socket_cost = BigUint::from(5u32);
+            let scale_factor_per_level = 0.15;
+            multiply_biguint_with_float(&base_add_socket_cost, (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32))
+        
         }
         UpgradeKind::AddColor(upgrade) => match upgrade.color {
             SocketColor::NONE => panic!("No such upgrade for baseline Socket Color NONE"),
             SocketColor::BLUE => panic!("No such upgrade for baseline Socket Color BLUE"),
-            SocketColor::RED => BigUint::from(60u32),
+            SocketColor::RED => BigUint::from(15u32),
         },
     }
+}
+
+fn multiply_biguint_with_float(bigint: &BigUint, float: f32) -> BigUint {
+    let scale = 1_000_000u32;
+    let scaled_float = (float * scale as f32).round() as u64;
+    let scaled_product = bigint * scaled_float;
+    scaled_product / BigUint::from(scale)
 }
 
 #[derive(Component)]
@@ -120,7 +126,7 @@ fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: R
 }
 
 fn add_socket_unlocks() -> Vec<Unlock> {
-    (0..10)
+    (0..20)
         .collect::<Vec<usize>>()
         .iter()
         .map(|elem| {
@@ -174,6 +180,7 @@ fn on_purchase(
     q_upgrade_button_container: Query<Entity, With<UpgradeButtonsContainer>>,
     gameplay_meshes: Res<GameplayMeshes>,
     font_handles: ResMut<HandleMap<FontKey>>,
+    time: Res<Time>,
 ) {
     let purchase = trigger.event();
 
@@ -202,10 +209,6 @@ fn on_purchase(
         UpgradeKind::AddSocket(_) => {
             for (ring_entity, mut ring) in q_rings.iter_mut() {
                 let mesh = gameplay_meshes.quad64.clone();
-                let socket_material = socket_materials.add(SocketMaterial {
-                    inserted_color: map_socket_color(SocketColor::NONE),
-                    bevel_color: { BLACK.into() },
-                });
 
                 for socket_entity in &ring.sockets {
                     let (_e, socket, mut socket_transform) =
@@ -214,8 +217,14 @@ fn on_purchase(
                         socket_position(socket.index, ring.sockets.len() + 1).extend(1.)
                 }
 
-                let hand = ring.hands[0];
                 let count = ring.sockets.len();
+                let socket_trigger_duration = 0.;
+                let socket_material = socket_materials.add(SocketMaterial {
+                    inserted_color: map_socket_color(SocketColor::NONE),
+                    highlight_color: map_socket_highlight_color(SocketColor::NONE),
+                    bevel_color: { BLACK.into() },
+                    data: Vec4::new(-1., socket_trigger_duration, 0., 0.)
+                });
 
                 commands
                     .entity(ring_entity)
@@ -223,7 +232,6 @@ fn on_purchase(
                         let new_socket_entity = spawn_socket(
                             ring_children,
                             SocketColor::NONE,
-                            hand,
                             ring_entity,
                             count,
                             mesh,
@@ -233,7 +241,10 @@ fn on_purchase(
 
                         ring.sockets.push(new_socket_entity);
                     });
+
+                    
             }
+
         }
         UpgradeKind::AddColor(color_upgrade) => {
             let (hotbar_entity, mut hotbar) = q_hotbar.single_mut();
