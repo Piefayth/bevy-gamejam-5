@@ -68,8 +68,10 @@ fn update_hotbar_text(
 pub fn map_socket_color_description_text(socket_color: SocketColor, upgrade_history: &UpgradeHistory) -> String {
     match socket_color {
         SocketColor::NONE => String::from("???"),
-        SocketColor::BLUE => format!("Slots into a socket. Grants {} $ every time it is triggered.", 1.),
+        SocketColor::BLUE => format!("Slots into a socket. Grants ${} every time it is triggered.", 1.),
         SocketColor::RED => format!("Grants no $. Triggers adjacent sockets when triggered."),
+        SocketColor::GREEN => format!("Grants ${} for each trigger in the ring's previous cycle.", 1.),
+        SocketColor::ORANGE => format!("Reduces the cooldown of all sockets by ${}.", 1.),
     }
 }
 

@@ -5,7 +5,7 @@ use std::f32::consts::PI;
 use bevy::{
     color::palettes::{
         css::{BLACK, BLUE, RED, WHITE},
-        tailwind::{BLUE_400, BLUE_600, GRAY_900, GRAY_950, RED_400, RED_600},
+        tailwind::{BLUE_400, BLUE_600, GRAY_900, GRAY_950, GREEN_400, GREEN_600, ORANGE_400, ORANGE_600, RED_400, RED_600},
     },
     math::VectorSpace,
     prelude::*,
@@ -67,6 +67,8 @@ pub enum SocketColor {
     NONE,
     BLUE,
     RED,
+    GREEN,
+    ORANGE,
 }
 
 impl SocketColor {
@@ -75,6 +77,8 @@ impl SocketColor {
             SocketColor::RED => "RED",
             SocketColor::NONE => "NONE",
             SocketColor::BLUE => "BLUE",
+            SocketColor::GREEN => "GREEN",
+            SocketColor::ORANGE => "ORANGE"
         }
     }
 }
@@ -105,7 +109,7 @@ fn spawn_level(
     time: Res<Time>,
 ) {
     if cfg!(feature = "dev") {
-        let large_number_str = "0";
+        let large_number_str = "1110";
         let large_number = BigUint::parse_bytes(large_number_str.as_bytes(), 10)
             .expect("Failed to parse big number");
         currency.amount = large_number;
@@ -228,6 +232,8 @@ pub fn map_socket_color(socket_color: SocketColor) -> LinearRgba {
         SocketColor::BLUE => BLUE_600,
         SocketColor::NONE => GRAY_950,
         SocketColor::RED => RED_600,
+        SocketColor::GREEN => GREEN_600,
+        SocketColor::ORANGE => ORANGE_600,
     }
     .into()
 }
@@ -237,6 +243,9 @@ pub fn map_socket_color_trigger_duration(socket_color: SocketColor) -> f32 {
         SocketColor::BLUE => 0.5,
         SocketColor::NONE => 0.,
         SocketColor::RED => 3.,
+        SocketColor::GREEN => 7.,
+        SocketColor::ORANGE => 0.5,
+        
     }
     .into()
 }
@@ -246,8 +255,21 @@ pub fn map_socket_highlight_color(socket_color: SocketColor) -> LinearRgba {
         SocketColor::BLUE => BLUE_400,
         SocketColor::NONE => GRAY_900,
         SocketColor::RED => RED_400,
+        SocketColor::GREEN => GREEN_400,
+        SocketColor::ORANGE => ORANGE_400,
     }
     .into()
+}
+
+// surely we shouldn't do this this way LMAO
+pub fn map_socket_color_hotkey(socket_color: SocketColor) -> u32 {
+    match socket_color {
+        SocketColor::NONE => panic!("uhhh"),
+        SocketColor::BLUE => 1,
+        SocketColor::RED => 2,
+        SocketColor::GREEN => 3,
+        SocketColor::ORANGE => 4,
+    }
 }
 
 #[derive(Event)]

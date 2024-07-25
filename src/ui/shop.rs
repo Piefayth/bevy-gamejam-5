@@ -10,7 +10,7 @@ use crate::{
         assets::{FontKey, HandleMap},
         materials::materials::{SocketMaterial, SocketUiMaterial},
         spawn::level::{
-            map_socket_color, map_socket_highlight_color, socket_position, spawn_socket, GameplayMeshes, Ring, Socket, SocketColor
+            map_socket_color, map_socket_color_hotkey, map_socket_highlight_color, socket_position, spawn_socket, GameplayMeshes, Ring, Socket, SocketColor
         },
     },
     screen::{playing::Currency, Screen},
@@ -61,7 +61,6 @@ pub struct AddColorUpgrade {
     color: SocketColor,
 }
 
-
 #[derive(Event)]
 pub struct NewShop {
     pub parent: Entity,
@@ -73,21 +72,23 @@ pub struct Purchase {
     pub upgrade_button_entity: Entity,
 }
 
-
-
 fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
     match upgrade_kind {
         UpgradeKind::None => BigUint::ZERO,
         UpgradeKind::AddSocket(upgrade) => {
             let base_add_socket_cost = BigUint::from(5u32);
             let scale_factor_per_level = 0.15;
-            multiply_biguint_with_float(&base_add_socket_cost, (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32))
-        
+            multiply_biguint_with_float(
+                &base_add_socket_cost,
+                (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32),
+            )
         }
         UpgradeKind::AddColor(upgrade) => match upgrade.color {
             SocketColor::NONE => panic!("No such upgrade for baseline Socket Color NONE"),
             SocketColor::BLUE => panic!("No such upgrade for baseline Socket Color BLUE"),
             SocketColor::RED => BigUint::from(15u32),
+            SocketColor::GREEN => BigUint::from(40u32),
+            SocketColor::ORANGE => BigUint::from(100u32),
         },
     }
 }
@@ -153,12 +154,22 @@ fn add_socket_unlocks() -> Vec<Unlock> {
 }
 
 fn add_color_unlocks() -> Vec<Unlock> {
-    vec![Unlock {
-        when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: 2 })],
-        then: UpgradeKind::AddColor(AddColorUpgrade {
-            color: SocketColor::RED,
-        }),
-    }]
+    vec![
+        Unlock {
+            when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: 2 })],
+            then: UpgradeKind::AddColor(AddColorUpgrade {
+                color: SocketColor::RED,
+            }),
+        },
+        Unlock {
+            when: vec![UpgradeKind::AddColor(AddColorUpgrade {
+                color: SocketColor::RED,
+            })],
+            then: UpgradeKind::AddColor(AddColorUpgrade {
+                color: SocketColor::GREEN,
+            }),
+        },
+    ]
 }
 
 #[derive(Default, Resource)]
@@ -226,7 +237,7 @@ fn on_purchase(
                     inserted_color: map_socket_color(SocketColor::NONE),
                     highlight_color: map_socket_highlight_color(SocketColor::NONE),
                     bevel_color: { BLACK.into() },
-                    data: Vec4::new(-1., socket_trigger_duration, 0., 0.)
+                    data: Vec4::new(-1., socket_trigger_duration, 0., 0.),
                 });
 
                 commands
@@ -244,10 +255,7 @@ fn on_purchase(
 
                         ring.sockets.push(new_socket_entity);
                     });
-
-                    
             }
-
         }
         UpgradeKind::AddColor(color_upgrade) => {
             let (hotbar_entity, mut hotbar) = q_hotbar.single_mut();
@@ -255,16 +263,16 @@ fn on_purchase(
 
             let socket_ui_material = socket_ui_materials.add(SocketUiMaterial {
                 bevel_color: BLACK.into(),
-                inserted_color: map_socket_color(SocketColor::RED),
+                inserted_color: map_socket_color(color_upgrade.color), 
             });
+
+            let hotkey = map_socket_color_hotkey(color_upgrade.color);
 
             commands
                 .entity(hotbar_entity)
                 .with_children(|hotbar_children| {
-                    hotbar_children.hotbar_button(socket_ui_material, "2.", 1);
+                    hotbar_children.hotbar_button(socket_ui_material, format!("{}.", hotkey), hotkey - 1);
                 });
-            // need to spawn the new hotbar button
-            // so we need to get access to the hotbar i guess?
         }
     }
 

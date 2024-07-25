@@ -18,8 +18,7 @@ use crate::{
         audio::soundtrack::PlaySoundtrack,
         materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial},
         spawn::level::{
-            map_socket_color, map_socket_color_trigger_duration, map_socket_highlight_color,
-            socket_position, GameplayMeshes, Ring, Socket, SocketColor, SpawnLevel,
+            map_socket_color, map_socket_color_hotkey, map_socket_color_trigger_duration, map_socket_highlight_color, socket_position, GameplayMeshes, Ring, Socket, SocketColor, SpawnLevel
         },
     },
     ui::{
@@ -114,13 +113,15 @@ fn enter_playing(
                                     description_socket_material.clone(),
                                 );
 
+                                let hotkey = map_socket_color_hotkey(hotbar_first_position_socket_color);
+
                                 hotbar_wrapper_children
                                     .hotbar(vec![hotbar_first_position_socket_color])
                                     .with_children(|hotbar_children| {
                                         hotbar_children.hotbar_button(
                                             button_socket_material.clone(),
-                                            "1.",
-                                            0,
+                                            format!("{}.", hotkey),
+                                            hotkey - 1,
                                         ); // someday we will have real hotkeys
                                     });
                             });
@@ -295,8 +296,16 @@ fn on_socket_triggered(
                 commands.trigger(SocketTriggered {
                     socket: ring.sockets[next_index],
                 });
-            }
-            _ => {}
+            },
+            SocketColor::GREEN => {
+                let score_gained = ring.previous_cycle.len();
+                ring.cycle_score += score_gained;
+            },
+            SocketColor::ORANGE => {
+                for socket_entity in &ring.sockets {
+                }
+            },
+            SocketColor::NONE => panic!("Shouldn't get points for an empty socket."),
         }
 
         currency.pending_amount = ring.cycle_score.clone();
@@ -327,7 +336,7 @@ fn on_socket_triggered(
 
             commands.spawn((
                 Text2dBundle {
-                    text: Text::from_section(format!("+{}", score_diff), text_style.clone())
+                    text: Text::from_section(format!("+${}", score_diff), text_style.clone())
                         .with_justify(JustifyText::Center),
                     transform: Transform::from_translation(text_start_position),
                     ..default()
@@ -529,7 +538,7 @@ fn progress_cycle(
             .get_mut(ring_mat_handle)
             .expect("Ring should've had a RingMaterial.");
         ring_mat.data[2] = progress_pct;
-        
+
         for socket_entity in &ring.sockets {
             let (socket_entity, socket, _t) = q_socket
                 .get(*socket_entity)
