@@ -557,6 +557,7 @@ fn spawn_scrolling_text(
         },
     ));
 }
+
 fn progress_cycle(
     mut commands: Commands,
     q_socket: Query<(Entity, &Socket, &Transform)>,
@@ -591,9 +592,10 @@ fn progress_cycle(
             let socket_position_pct =
                 (ring.sockets.len() as f32 - socket.index as f32) / ring.sockets.len() as f32;
 
-            if (*old_progress_pct <= socket_position_pct && socket_position_pct <= progress_pct)
-                || (socket_position_pct == 1. && *old_progress_pct > progress_pct)
-            {
+            let zeroth_socket_triggered = socket_position_pct == 1. && *old_progress_pct > progress_pct;
+            let other_socket_triggered = socket_position_pct != 1. && *old_progress_pct <= socket_position_pct && socket_position_pct <= progress_pct;
+
+            if zeroth_socket_triggered || other_socket_triggered {
                 commands.trigger(SocketTriggered {
                     socket: socket_entity,
                     ring: ring_entity,
