@@ -169,6 +169,14 @@ fn add_color_unlocks() -> Vec<Unlock> {
                 color: SocketColor::GREEN,
             }),
         },
+        Unlock {
+            when: vec![UpgradeKind::AddColor(AddColorUpgrade {
+                color: SocketColor::GREEN,
+            })],
+            then: UpgradeKind::AddColor(AddColorUpgrade {
+                color: SocketColor::ORANGE,
+            }),
+        },
     ]
 }
 
