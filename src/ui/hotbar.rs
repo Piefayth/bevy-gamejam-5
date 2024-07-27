@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{game::{materials::materials::SocketUiMaterial, spawn::level::{map_socket_color, SocketColor}}, screen::Screen};
 
-use super::{shop::UpgradeHistory, widgets::{Hotbar, HotbarButton, HotbarDescriptionIcon, HotbarDescriptionText}};
+use super::{shop::{EnhanceColorUpgrade, UpgradeHistory, UpgradeKind}, widgets::{Hotbar, HotbarButton, HotbarDescriptionIcon, HotbarDescriptionText}};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -42,14 +42,15 @@ fn update_hotbar_selection(keys: Res<ButtonInput<KeyCode>>, mut query: Query<&mu
 }
 
 fn update_hotbar_text(
-    q_hotbar: Query<&Hotbar, Changed<Hotbar>>,
+    q_hotbar: Query<&Hotbar>,
+    q_changed_hotbar: Query<Entity, Changed<Hotbar>>,
     mut q_hotbar_text: Query<&mut Text, With<HotbarDescriptionText>>,
     mut socket_ui_materials: ResMut<Assets<SocketUiMaterial>>,
     mut q_hotbar_description_icon: Query<(&Handle<SocketUiMaterial>, &mut HotbarDescriptionIcon)>,
     upgrade_history: Res<UpgradeHistory>,
 ) {
-    if q_hotbar.is_empty() {
-        return;
+    if !q_changed_hotbar.is_empty() && !upgrade_history.is_changed() {
+        return
     }
 
     let hotbar = q_hotbar.single();
@@ -68,10 +69,38 @@ fn update_hotbar_text(
 pub fn map_socket_color_description_text(socket_color: SocketColor, upgrade_history: &UpgradeHistory) -> String {
     match socket_color {
         SocketColor::NONE => String::from("???"),
-        SocketColor::BLUE => format!("Slots into a socket. Grants ${} every time it is triggered.", 1.),
-        SocketColor::RED => format!("Grants no $. Triggers adjacent sockets when triggered."),
-        SocketColor::GREEN => format!("Grants ${} for each trigger in the ring's previous cycle.", 1.),
-        SocketColor::ORANGE => format!("Reduces the cooldown of all sockets by {} second.", 1.),
+        SocketColor::BLUE => {
+            if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 1,
+            })) {
+                format!("Slots into a socket. Grants $1 for ALL other socketed blue orbs.")
+            } else {
+                format!("Slots into a socket. Grants ${} every time it is triggered.", 1.)
+            }
+        },
+        SocketColor::RED => {
+            if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::RED,
+                tier: 1,
+            })){
+                format!("Grants no $. Triggers adjacent sockets on this AND adacent rings when triggered.")
+            } else {
+                format!("Grants no $. Triggers adjacent sockets when triggered.")
+            }
+        },
+        SocketColor::GREEN => {
+            if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::GREEN,
+                tier: 1,
+            })){
+                format!("Grants ${} for each trigger in the ring's previous cycle. Also grants {}% of global pending income.", 1., 10)
+            } else {
+                format!("Grants ${} for each trigger in the ring's previous cycle.", 1.)
+            }
+        },
+        SocketColor::ORANGE => format!("Reduces the cooldown of all sockets in the ring by {} second(s).", 1.),
+        SocketColor::PINK => format!("When triggered, increases the cycle's multiplier by {}.", 1.),
     }
 }
 

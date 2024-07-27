@@ -8,9 +8,9 @@ use num_bigint::BigUint;
 use crate::{
     game::{
         assets::{FontKey, HandleMap},
-        materials::materials::{SocketMaterial, SocketUiMaterial},
+        materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial},
         spawn::level::{
-            map_socket_color, map_socket_color_hotkey, map_socket_highlight_color, socket_position, spawn_socket, GameplayMeshes, Ring, Socket, SocketColor
+            map_socket_color, map_socket_color_hotkey, map_socket_highlight_color, socket_position, spawn_ring, spawn_socket, GameplayMeshes, Ring, RingIndex, Socket, SocketColor, RING_RADIUS, RING_THICKNESS
         },
     },
     screen::{playing::Currency, Screen},
@@ -43,6 +43,8 @@ pub enum UpgradeKind {
     None,
     AddSocket(AddSocketUpgrade),
     AddColor(AddColorUpgrade),
+    AddRing(AddRingUpgrade),
+    EnhanceColor(EnhanceColorUpgrade),
 }
 
 #[derive(Default, PartialEq, Eq, Hash, Clone)]
@@ -57,8 +59,19 @@ pub struct AddSocketUpgrade {
 }
 
 #[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub struct AddRingUpgrade {
+    pub level: u32,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
 pub struct AddColorUpgrade {
     color: SocketColor,
+}
+
+#[derive(PartialEq, Eq, Hash, Clone, Copy)]
+pub struct EnhanceColorUpgrade {
+    pub color: SocketColor,
+    pub tier: u32,
 }
 
 #[derive(Event)]
@@ -89,11 +102,29 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
             SocketColor::RED => BigUint::from(15u32),
             SocketColor::GREEN => BigUint::from(40u32),
             SocketColor::ORANGE => BigUint::from(100u32),
+            SocketColor::PINK => BigUint::from(300u32),
+        },
+        UpgradeKind::AddRing(upgrade) => {
+            let base_add_ring_cost = BigUint::from(1000u32);
+            let scale_factor_per_level = 0.05;
+
+            multiply_biguint_with_float(
+                &base_add_ring_cost,
+                (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32),
+            )
+        },
+        UpgradeKind::EnhanceColor(upgrade) => match upgrade.color {
+            SocketColor::NONE => todo!(),
+            SocketColor::BLUE => BigUint::from(1500u32),
+            SocketColor::RED => BigUint::from(4000u32),
+            SocketColor::GREEN => todo!(),
+            SocketColor::ORANGE => todo!(),
+            SocketColor::PINK => todo!(),
         },
     }
 }
 
-fn multiply_biguint_with_float(bigint: &BigUint, float: f32) -> BigUint {
+pub fn multiply_biguint_with_float(bigint: &BigUint, float: f32) -> BigUint {
     let scale = 1_000_000u32;
     let scaled_float = (float * scale as f32).round() as u64;
     let scaled_product = bigint * scaled_float;
@@ -104,10 +135,10 @@ fn multiply_biguint_with_float(bigint: &BigUint, float: f32) -> BigUint {
 struct UpgradeButtonsContainer;
 
 fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: ResMut<Unlocks>) {
-    // define every unlock
-
     unlocks.0 = add_socket_unlocks();
-    unlocks.0.extend(add_color_unlocks());
+    unlocks.0.extend(build_color_unlocks());
+    unlocks.0.extend(build_ring_unlocks());
+    unlocks.0.extend(build_color_enhance_unlocks());
 
     let parent = trigger.event().parent;
     commands.entity(parent).with_children(|gameplay_parent| {
@@ -153,7 +184,33 @@ fn add_socket_unlocks() -> Vec<Unlock> {
         .collect()
 }
 
-fn add_color_unlocks() -> Vec<Unlock> {
+fn build_ring_unlocks() -> Vec<Unlock> {
+    (0..64)
+    .collect::<Vec<usize>>()
+    .iter()
+    .map(|elem| {
+        if *elem == 0 {
+            Unlock {
+                when: vec![UpgradeKind::AddColor(AddColorUpgrade {
+                    color: SocketColor::PINK,
+                })],
+                then: UpgradeKind::AddRing(AddRingUpgrade { level: 1 }),
+            }
+        } else {
+            Unlock {
+                when: vec![UpgradeKind::AddRing(AddRingUpgrade {
+                    level: *elem as u32,
+                })],
+                then: UpgradeKind::AddRing(AddRingUpgrade {
+                    level: *elem as u32 + 1,
+                }),
+            }
+        }
+    })
+    .collect()
+}
+
+fn build_color_unlocks() -> Vec<Unlock> {
     vec![
         Unlock {
             when: vec![UpgradeKind::AddSocket(AddSocketUpgrade { level: 2 })],
@@ -177,6 +234,36 @@ fn add_color_unlocks() -> Vec<Unlock> {
                 color: SocketColor::ORANGE,
             }),
         },
+        Unlock {
+            when: vec![UpgradeKind::AddColor(AddColorUpgrade {
+                color: SocketColor::ORANGE,
+            })],
+            then: UpgradeKind::AddColor(AddColorUpgrade {
+                color: SocketColor::PINK,
+            }),
+        },
+    ]
+}
+
+fn build_color_enhance_unlocks() -> Vec<Unlock> {
+    vec![
+        Unlock {
+            when: vec![UpgradeKind::AddRing(AddRingUpgrade { level: 1 })],
+            then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 1
+            }),
+        },
+        Unlock {
+            when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 1
+            })],
+            then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::RED,
+                tier: 1
+            }),
+        }
     ]
 }
 
@@ -190,6 +277,7 @@ struct Unlock {
 
 fn on_purchase(
     trigger: Trigger<Purchase>,
+    mut ring_index: ResMut<RingIndex>,
     mut upgrade_history: ResMut<UpgradeHistory>,
     mut q_rings: Query<(Entity, &mut Ring)>,
     mut q_sockets: Query<(Entity, &Socket, &mut Transform)>,
@@ -197,6 +285,7 @@ fn on_purchase(
     mut commands: Commands,
     mut currency: ResMut<Currency>,
     mut socket_materials: ResMut<Assets<SocketMaterial>>,
+    mut ring_materials: ResMut<Assets<RingMaterial>>,
     mut socket_ui_materials: ResMut<Assets<SocketUiMaterial>>,
     mut unlocks: ResMut<Unlocks>,
     q_upgrade_button_container: Query<Entity, With<UpgradeButtonsContainer>>,
@@ -245,7 +334,7 @@ fn on_purchase(
                     inserted_color: map_socket_color(SocketColor::NONE),
                     highlight_color: map_socket_highlight_color(SocketColor::NONE),
                     bevel_color: { BLACK.into() },
-                    data: Vec4::new(-1., socket_trigger_duration, 0., 0.),
+                    data: Vec4::new(-1000., socket_trigger_duration, 0., 0.),
                 });
 
                 commands
@@ -282,6 +371,28 @@ fn on_purchase(
                     hotbar_children.hotbar_button(socket_ui_material, format!("{}.", hotkey), hotkey - 1);
                 });
         }
+        UpgradeKind::AddRing(_) => {
+            let existing_ring_count = q_rings.iter().count();
+            let any_existing_ring = q_rings.iter().next().unwrap();
+
+            spawn_ring(
+                &mut commands, 
+                ring_index,
+                gameplay_meshes.quad512.clone(),
+                gameplay_meshes.quad64.clone(), 
+                ring_materials.add(RingMaterial {
+                    data: Vec4::new(RING_RADIUS, RING_THICKNESS, 0., 0.),
+                }),
+                socket_materials, 
+                any_existing_ring.1.sockets.len(),
+                time, 
+                existing_ring_count,
+            )
+        },
+        UpgradeKind::EnhanceColor(_) => {
+            
+        },
+        
     }
 
     // 2. Unlock what is available now
@@ -333,6 +444,18 @@ fn upgrade_text(upgrade: &Upgrade) -> impl Into<String> {
         UpgradeKind::None => "Errmm.. This shouldn't be for sale",
         UpgradeKind::AddSocket(_) => "Add a socket",
         UpgradeKind::AddColor(upgrade) => &format!("Add {} orbs", upgrade.color.as_str()),
+        UpgradeKind::AddRing(_) => "Add a ring",
+        UpgradeKind::EnhanceColor(upgrade) => {
+            match upgrade {
+                EnhanceColorUpgrade { color: SocketColor::BLUE, tier: 1 } => {
+                    "BLUE orbs new behavior"
+                },
+                EnhanceColorUpgrade { color: SocketColor::RED, tier: 1 } => {
+                    "RED orbs new behavior"
+                },
+                _ => "You are seeing this message because I made a mistake."
+            }
+        },
     };
     format!("${} | {}", upgrade.cost, description)
 }

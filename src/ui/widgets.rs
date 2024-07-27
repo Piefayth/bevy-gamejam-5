@@ -308,10 +308,7 @@ impl<T: Spawn> Widgets for T {
                 //background_color: RED.into(),
                 ..default()
             },
-            Pickable {
-                should_block_lower: false,
-                is_hoverable: false,
-            },
+            Pickable::IGNORE,
         ));
 
         entity
@@ -330,6 +327,7 @@ impl<T: Spawn> Widgets for T {
                 ..default()
             },
             UpgradeShop,
+            Pickable::IGNORE,
         ));
 
         entity
@@ -347,10 +345,7 @@ impl<T: Spawn> Widgets for T {
                 },
                 ..default()
             },
-            Pickable {
-                should_block_lower: false,
-                is_hoverable: false,
-            },
+            Pickable::IGNORE,
         ));
 
         entity.with_children(|score_display| {
@@ -385,10 +380,7 @@ impl<T: Spawn> Widgets for T {
                 color_mappings: starting_colors,
                 ..default()
             },
-            Pickable {
-                should_block_lower: false,
-                is_hoverable: false,
-            },
+            Pickable::IGNORE,
         ));
 
         entity
@@ -407,10 +399,7 @@ impl<T: Spawn> Widgets for T {
                 ..default()
             },
             HotbarDescription,
-            Pickable {
-                should_block_lower: false,
-                is_hoverable: false,
-            },
+            Pickable::IGNORE,
         ));
 
         entity.with_children(|children| {
@@ -483,10 +472,7 @@ impl<T: Spawn> Widgets for T {
                     material: socket_material,
                     ..default()
                 },
-                Pickable {
-                    should_block_lower: false,
-                    is_hoverable: false,
-                },
+                Pickable::IGNORE,
             ));
 
             hotbar_button
@@ -500,10 +486,7 @@ impl<T: Spawn> Widgets for T {
                             ..default()
                         },
                     ),
-                    Pickable {
-                        should_block_lower: false,
-                        is_hoverable: false,
-                    },
+                    Pickable::IGNORE,
                 ))
                 .insert(Style {
                     position_type: PositionType::Absolute,

@@ -6,6 +6,7 @@ pub mod assets;
 pub mod audio;
 pub mod materials;
 pub mod spawn;
+pub mod camera;
 
 pub(super) fn plugin(app: &mut App) {
     app.add_plugins((
@@ -13,5 +14,6 @@ pub(super) fn plugin(app: &mut App) {
         assets::plugin,
         materials::plugin,
         spawn::plugin,
+        camera::CameraControlPlugin,
     ));
 }

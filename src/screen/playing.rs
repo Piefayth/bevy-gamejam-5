@@ -3,8 +3,7 @@
 use std::{f32::consts::PI, time::Duration};
 
 use bevy::{
-    color::palettes::css::{BLACK, BLUE, LIGHT_GREEN, ORANGE, PINK, WHITE},
-    input::common_conditions::input_just_pressed,
+    color::palettes::css::{BLACK, BLUE, LIGHT_GREEN, ORANGE, PINK, RED, WHITE, YELLOW},
     prelude::*,
     sprite::MaterialMesh2dBundle,
 };
@@ -18,14 +17,12 @@ use crate::{
         audio::soundtrack::PlaySoundtrack,
         materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial},
         spawn::level::{
-            map_socket_color, map_socket_color_hotkey, map_socket_color_trigger_duration,
-            map_socket_highlight_color, socket_position, GameplayMeshes, Ring, Socket, SocketColor,
-            SpawnLevel,
+            get_grid_coordinates, map_socket_color, map_socket_color_hotkey, map_socket_color_trigger_duration, map_socket_highlight_color, GameplayMeshes, Ring, RingIndex, Socket, SocketColor, SpawnLevel
         },
     },
     ui::{
         hotbar::map_socket_color_description_text,
-        shop::{NewShop, UpgradeHistory},
+        shop::{multiply_biguint_with_float, EnhanceColorUpgrade, NewShop, UpgradeHistory, UpgradeKind},
     },
 };
 
@@ -34,7 +31,6 @@ use crate::ui::prelude::*;
 #[derive(Resource, Default)]
 pub struct Currency {
     pub amount: BigUint,
-    pub pending_amount: BigUint,
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -44,9 +40,8 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (
-            return_to_title_screen
-                .run_if(in_state(Screen::Playing).and_then(input_just_pressed(KeyCode::Escape))),
-            (
+            (   
+                count_blue_orbs,
                 (progress_cycle, ring_cycle_display).chain(),
                 despawn_after_system,
             )
@@ -55,6 +50,7 @@ pub(super) fn plugin(app: &mut App) {
     );
 
     app.init_resource::<Currency>();
+    app.init_resource::<BlueOrbCount>();
 
     app.observe(on_socket_triggered);
     app.observe(on_cycle_complete);
@@ -140,10 +136,6 @@ fn enter_playing(
 fn exit_playing(mut commands: Commands) {
     // We could use [`StateScoped`] on the sound playing entites instead.
     commands.trigger(PlaySoundtrack::Disable);
-}
-
-fn return_to_title_screen(mut next_screen: ResMut<NextState<Screen>>) {
-    next_screen.set(Screen::Title);
 }
 
 #[derive(Component)]
@@ -249,7 +241,7 @@ fn ring_cycle_display_panel_position(
 
 #[derive(Event)]
 pub struct SocketTriggered {
-    socket: Entity,
+    socket: usize,
     ring: Entity,
 }
 
@@ -259,21 +251,49 @@ pub struct CycleComplete {
     new_cycle_start_seconds: f32,
 }
 
+
+pub struct ReduceCooldownEffect {
+    pub ring: Entity,
+    pub amount: f32,
+}
+
 pub enum SocketEffect {
-    ReduceCooldown(f32),
+    ReduceCooldown(ReduceCooldownEffect),
+}
+
+#[derive(Resource, Default)]
+pub struct BlueOrbCount(u32);
+
+fn count_blue_orbs(
+    mut count: ResMut<BlueOrbCount>,
+    q_socket: Query<(&Socket)>,
+    q_ring: Query<(&mut Ring)>,
+) {
+    count.0 = 0u32;
+
+    for ring in &q_ring {
+        for socket_entity in &ring.sockets {
+            let socket = q_socket.get(*socket_entity).expect("Ring.sockets member should have Socket component.");
+            if socket.color == SocketColor::BLUE {
+                count.0 += 1;
+            }
+        }
+    }
 }
 
 fn on_socket_triggered(
     trigger: Trigger<SocketTriggered>,
+    ring_index: Res<RingIndex>,
     mut commands: Commands,
     mut materials: ResMut<Assets<SocketMaterial>>,
     mut q_socket: Query<(Entity, &mut Socket, &Handle<SocketMaterial>, &Transform)>,
-    mut q_ring: Query<(Entity, &mut Ring)>,
-    mut currency: ResMut<Currency>,
+    mut q_ring: Query<(Entity, &mut Ring, &Transform)>,
+    upgrade_history: Res<UpgradeHistory>,
     font_handles: ResMut<HandleMap<FontKey>>,
+    blue_orb_count: ResMut<BlueOrbCount>,
     time: Res<Time>,
 ) {
-    let (ring_entity, mut ring) = q_ring
+    let (ring_entity, mut ring, ring_transform) = q_ring
         .get_mut(trigger.event().ring)
         .expect("SocketTriggered.ring should've referenced an Entity with a Ring component.");
 
@@ -282,7 +302,7 @@ fn on_socket_triggered(
     // First block, mutate the triggered socket
     {
         let (socket_entity, mut socket, socket_mat_handle, socket_transform) =
-            q_socket.get_mut(trigger.event().socket).expect(
+            q_socket.get_mut(ring.sockets[trigger.event().socket]).expect(
                 "SocketTriggered.socket should've referenced an Entity with a Socket component.",
             );
 
@@ -292,107 +312,157 @@ fn on_socket_triggered(
 
         if triggered_successfully {
             let old_score = ring.cycle_score.clone();
+            let old_multiplier = ring.cycle_multiplier.clone();
 
             ring.cycle.push(socket.color);
 
             match socket.color {
                 SocketColor::BLUE => {
-                    let score_gained = BigUint::from(1u32);
-                    ring.cycle_score += score_gained;
+                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                        color: SocketColor::BLUE,
+                        tier: 1,
+                    })) {
+                        ring.cycle_score += BigUint::from(blue_orb_count.0);
+                    } else {
+                        ring.cycle_score += BigUint::from(1u32);
+                    }
                 }
                 SocketColor::RED => {
                     let num_sockets = ring.sockets.len();
                     let prev_index = (socket.index + num_sockets - 1) % num_sockets;
                     let next_index = (socket.index + 1) % num_sockets;
                     commands.trigger(SocketTriggered {
-                        socket: ring.sockets[prev_index],
+                        socket: prev_index,
                         ring: ring_entity,
                     });
                     commands.trigger(SocketTriggered {
-                        socket: ring.sockets[next_index],
+                        socket: next_index,
                         ring: ring_entity,
                     });
+
+                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                        color: SocketColor::RED,
+                        tier: 1,
+                    })) {
+                        let ring_grid_coordinates = get_grid_coordinates(ring.index);
+                        let right_neighbor_coordinates = &(ring_grid_coordinates + IVec2::X);
+                        let left_neighbor_coordinates = &(ring_grid_coordinates - IVec2::X);
+
+                        if let Some(neighbor_ring) = ring_index.rings.get(right_neighbor_coordinates) {
+                            commands.trigger(SocketTriggered {
+                                ring: *neighbor_ring, 
+                                socket: prev_index,
+                            });
+
+                            commands.trigger(SocketTriggered {
+                                ring: *neighbor_ring, 
+                                socket: next_index,
+                            });
+                        }
+
+                        if let Some(neighbor_ring) = ring_index.rings.get(left_neighbor_coordinates) {
+                            commands.trigger(SocketTriggered {
+                                ring: *neighbor_ring, 
+                                socket: prev_index,
+                            });
+
+                            commands.trigger(SocketTriggered {
+                                ring: *neighbor_ring, 
+                                socket: next_index,
+                            });
+                        }
+
+
+                    }
                 }
                 SocketColor::GREEN => {
                     let score_gained = ring.previous_cycle.len();
                     ring.cycle_score += score_gained;
                 }
                 SocketColor::ORANGE => {
-                    pending_socket_effects.push(SocketEffect::ReduceCooldown(1.));
-                },
+                    pending_socket_effects.push(SocketEffect::ReduceCooldown(ReduceCooldownEffect {
+                        ring: ring_entity,
+                        amount: 0.5
+                    }));
+                }
                 SocketColor::NONE => panic!("Shouldn't get points for an empty socket."),
+                SocketColor::PINK => {
+                    ring.cycle_multiplier += 1.;
+                }
             }
 
-            currency.pending_amount = ring.cycle_score.clone();
+            ring.pending_amount = multiply_biguint_with_float(&ring.cycle_score, ring.cycle_multiplier); // TODO: have an update_currency_system that correctly updates pending...
 
             let socket_material = materials.get_mut(socket_mat_handle).unwrap();
             socket_material.data[0] = time.elapsed_seconds();
             socket.last_triggered_time_seconds = time.elapsed_seconds();
 
             let score_diff = &ring.cycle_score - old_score;
+            let mult_diff = &ring.cycle_multiplier - old_multiplier;
 
             if score_diff != BigUint::ZERO {
-                let tween_seconds = 1;
-                let text_start_position = (socket_transform.translation.xy()).extend(100.);
-                let tween = Tween::new(
-                    EaseFunction::QuadraticIn,
-                    Duration::from_secs(tween_seconds),
-                    TransformPositionLens {
-                        start: text_start_position,
-                        end: text_start_position + Vec3::new(0., 100., 0.),
-                    },
+                spawn_scrolling_text(
+                    &mut commands,
+                    format!("+${}", score_diff),
+                    ring_transform.translation + (socket_transform.translation.xy()).extend(100.),
+                    1.,
+                    100.,
+                    TextScrollDirection::UP,
+                    WHITE.into(),
+                    time.elapsed_seconds(),
+                    font_handles[&FontKey::Default].clone(),
+                    20.,
                 );
-
-                let text_style = TextStyle {
-                    font: font_handles[&FontKey::Default].clone(),
-                    font_size: 20.,
-                    ..default()
-                };
-
-                commands.spawn((
-                    Text2dBundle {
-                        text: Text::from_section(format!("+${}", score_diff), text_style.clone())
-                            .with_justify(JustifyText::Center),
-                        transform: Transform::from_translation(text_start_position),
-                        ..default()
-                    },
-                    Animator::new(tween),
-                    DespawnAfter {
-                        lifetime_seconds: 1.,
-                        spawn_time: time.elapsed_seconds(),
-                    },
-                ));
+            } else if mult_diff != 0. {
+                spawn_scrolling_text(
+                    &mut commands,
+                    format!("+{}x", mult_diff),
+                    ring_transform.translation + (socket_transform.translation.xy()).extend(100.),
+                    1.,
+                    100.,
+                    TextScrollDirection::UP,
+                    YELLOW.into(),
+                    time.elapsed_seconds(),
+                    font_handles[&FontKey::Default].clone(),
+                    26.,
+                );
             }
         }
     }
 
     // Second block, mutate the other sockets
     {
-        for socket_entity in &ring.sockets {
+        // for socket_entity in &ring.sockets {
+        //     // the triggered socket can't apply an effect to itself
+        //     if *socket_entity == ring.sockets[trigger.event().socket] {
+        //         continue;
+        //     }
 
-            // the triggered socket can't apply an effect to itself
-            if *socket_entity == trigger.event().socket {
-                continue;
-            }
+        //     let (_, mut socket, socket_mat_handle, _) = q_socket
+        //         .get_mut(*socket_entity)
+        //         .expect("Socket in sockets array pls");
 
-            let (_, mut socket, socket_mat_handle, _) = q_socket.get_mut(*socket_entity).expect("Socket in sockets array pls");
-            for effect in &pending_socket_effects { // note, right now, effects apply to every socket, later we might need to filter them
-                match effect {
-                    SocketEffect::ReduceCooldown(amount) => {
-                        
+        // }
+
+        for effect in &pending_socket_effects {
+            match effect {
+                SocketEffect::ReduceCooldown(reduce_cooldown_effect) => {
+                    let (_, ring, _) = q_ring.get(reduce_cooldown_effect.ring).expect("Had a reduce cooldown effect with an invalid ring reference.");
+
+                    for socket_entity in &ring.sockets {
+                        let (_, mut socket, socket_mat_handle, _) = q_socket.get_mut(*socket_entity).expect("Non-Socket in Ring sockets vec.");
                         if socket.last_triggered_time_seconds > 0. {
                             let socket_material = materials.get_mut(socket_mat_handle).unwrap();
     
-                            socket.last_triggered_time_seconds -= amount;
-                            socket_material.data[0] -= amount;
-    
+                            socket.last_triggered_time_seconds -= reduce_cooldown_effect.amount;
+                            socket_material.data[0] -= reduce_cooldown_effect.amount;
                         }
-
-                        
                     }
+
                 }
             }
         }
+
     }
 }
 
@@ -438,7 +508,13 @@ fn on_cycle_complete(
         .iter()
         .fold(BigUint::ZERO, |acc, bonus| acc + score_bonus(bonus));
 
-    let cycle_score = ring.cycle_score.clone() + bonus_score;
+    let cycle_score = multiply_biguint_with_float(
+        &(ring.cycle_score.clone()),
+        ring.cycle_multiplier,
+    ) + bonus_score;
+
+    let old_multiplier = ring.cycle_multiplier;
+    let unmultiplied_score = ring.cycle_score.clone();
 
     ring.cycle_count += BigUint::from(1u32);
     ring.previous_bonuses = bonuses.clone();
@@ -449,6 +525,7 @@ fn on_cycle_complete(
     ring.cycle = Vec::new();
     ring.cycle_score = BigUint::ZERO;
     ring.cycle_start_seconds = trigger.event().new_cycle_start_seconds;
+    ring.cycle_multiplier = 1.;
 
     // reset the cycle display
     for cycle_display_entity in &ring.cycle_display_panels {
@@ -473,13 +550,36 @@ fn on_cycle_complete(
         );
     }
 
+    let mut texts_above_bonus = 1;
+    // display the multiplier
+    if old_multiplier > 1. {
+        texts_above_bonus += 1;
+
+        spawn_scrolling_text(
+            &mut commands,
+            format!(
+                "${}x{}",
+                unmultiplied_score, old_multiplier
+            ),
+            (ring_transform.translation.xy()).extend(100.)
+                + Vec3::Y * (50. - 25. * texts_above_bonus as f32),
+            2.,
+            200.,
+            TextScrollDirection::UP,
+            LIGHT_GREEN.into(),
+            time.elapsed_seconds(),
+            font_handles[&FontKey::Default].clone(),
+            20.,
+        );
+    }
+
     // display the bonuses, if any
     for (index, bonus) in bonuses.iter().enumerate() {
         spawn_scrolling_text(
             &mut commands,
             bonus_text(bonus),
             (ring_transform.translation.xy()).extend(100.)
-                + Vec3::Y * (50 - 30 * (index + 1)) as f32,
+                + Vec3::Y * (50. - 25. * (texts_above_bonus + index + 1) as f32),
             2.,
             200.,
             TextScrollDirection::UP,
@@ -563,7 +663,7 @@ fn progress_cycle(
     q_socket: Query<(Entity, &Socket, &Transform)>,
     q_ring: Query<(Entity, &mut Ring, &Handle<RingMaterial>)>,
     time: Res<Time>,
-    mut old_progress_pct: Local<f32>,
+    mut old_progress_pcts: Local<Vec<f32>>,
     mut ring_materials: ResMut<Assets<RingMaterial>>,
 ) {
     for (ring_entity, ring, ring_mat_handle) in &q_ring {
@@ -589,21 +689,31 @@ fn progress_cycle(
             let (socket_entity, socket, _t) = q_socket
                 .get(*socket_entity)
                 .expect("Ring's socket Vec contained Entity that was not Socket!");
+
+            if old_progress_pcts.len() < ring.index + 1 {
+                old_progress_pcts.push(0.)
+            }
+
+            let old_progress_pct = old_progress_pcts[ring.index];
+
             let socket_position_pct =
                 (ring.sockets.len() as f32 - socket.index as f32) / ring.sockets.len() as f32;
 
-            let zeroth_socket_triggered = socket_position_pct == 1. && *old_progress_pct > progress_pct;
-            let other_socket_triggered = socket_position_pct != 1. && *old_progress_pct <= socket_position_pct && socket_position_pct <= progress_pct;
+            let zeroth_socket_triggered =
+                socket_position_pct == 1. && old_progress_pct > progress_pct;
+            let other_socket_triggered = socket_position_pct != 1.
+                && old_progress_pct <= socket_position_pct
+                && socket_position_pct <= progress_pct;
 
             if zeroth_socket_triggered || other_socket_triggered {
                 commands.trigger(SocketTriggered {
-                    socket: socket_entity,
+                    socket: socket.index,
                     ring: ring_entity,
                 });
             }
         }
 
-        *old_progress_pct = progress_pct;
+        old_progress_pcts[ring.index] = progress_pct;
     }
 }
 

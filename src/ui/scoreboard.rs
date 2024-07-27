@@ -35,13 +35,14 @@ fn update_cycles(
     }
 }
 
-fn update_currency(currency: Res<Currency>, mut q_text: Query<&mut Text, With<CurrencyText>>) {
-    if currency.is_changed() {
-        let mut currency_text = q_text.single_mut();
-
-        currency_text.sections[0].value = format!(
-            "${} (Pending ${})",
-            currency.amount, currency.pending_amount
-        );
-    }
+fn update_currency(currency: Res<Currency>, q_rings: Query<&Ring>, mut q_text: Query<&mut Text, With<CurrencyText>>) {
+    let total_pending_amount = q_rings.iter().fold(BigUint::ZERO, |acc, ring| {
+        acc + &ring.pending_amount
+    });
+    let mut currency_text = q_text.single_mut();
+    currency_text.sections[0].value = format!(
+        "${} (Pending ${})",
+        currency.amount,
+        total_pending_amount.to_string()
+    );
 }

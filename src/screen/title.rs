@@ -1,4 +1,3 @@
-//! The title screen that appears when the game starts.
 
 use bevy::{
     color::palettes::{
@@ -7,6 +6,7 @@ use bevy::{
     prelude::*,
     sprite::{MaterialMesh2dBundle, Mesh2dHandle},
 };
+use bevy_mod_picking::{events::{Drag, Pointer}, prelude::On};
 
 use super::Screen;
 use crate::{game::materials::materials::BackgroundMaterial, ui::prelude::*};

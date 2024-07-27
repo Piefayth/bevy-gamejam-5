@@ -3,7 +3,7 @@
 mod credits;
 mod loading;
 pub mod playing;
-mod title;
+pub mod title;
 
 use bevy::prelude::*;
 
