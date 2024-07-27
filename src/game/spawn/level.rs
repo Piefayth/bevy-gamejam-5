@@ -125,7 +125,7 @@ fn spawn_level(
     time: Res<Time>,
 ) {
     if cfg!(feature = "dev") {
-        let large_number_str = "0";
+        let large_number_str = "1000";
         let large_number = BigUint::parse_bytes(large_number_str.as_bytes(), 10)
             .expect("Failed to parse big number");
         currency.amount = large_number;
@@ -357,7 +357,7 @@ pub fn map_socket_color_trigger_duration(socket_color: SocketColor) -> f32 {
         SocketColor::RED => 3.,
         SocketColor::GREEN => 7.,
         SocketColor::ORANGE => 0.3,
-        SocketColor::PINK => 15.,
+        SocketColor::PINK => 14.,
     }
     .into()
 }

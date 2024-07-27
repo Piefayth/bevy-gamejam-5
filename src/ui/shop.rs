@@ -1,4 +1,11 @@
-use bevy::{color::palettes::css::BLACK, prelude::*, utils::HashSet};
+use bevy::{
+    color::palettes::{
+        css::BLACK,
+        tailwind::{GRAY_400, GRAY_500, GRAY_600, GRAY_700, GRAY_800, GRAY_900},
+    },
+    prelude::*,
+    utils::HashSet,
+};
 use bevy_mod_picking::{
     events::{Click, Pointer},
     prelude::On,
@@ -10,20 +17,25 @@ use crate::{
         assets::{FontKey, HandleMap},
         materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial},
         spawn::level::{
-            map_socket_color, map_socket_color_hotkey, map_socket_highlight_color, socket_position, spawn_ring, spawn_socket, GameplayMeshes, Ring, RingIndex, Socket, SocketColor, RING_RADIUS, RING_THICKNESS
+            map_socket_color, map_socket_color_hotkey, map_socket_highlight_color, socket_position,
+            spawn_ring, spawn_socket, GameplayMeshes, Ring, RingIndex, Socket, SocketColor,
+            RING_RADIUS, RING_THICKNESS,
         },
     },
     screen::{playing::Currency, Screen},
     ui::widgets::Widgets,
 };
 
-use super::widgets::{Hotbar, UpgradeShop};
+use super::{
+    interaction::InteractionPalette,
+    widgets::{Hotbar, ShopButton, UpgradeShop},
+};
 
 pub(super) fn plugin(app: &mut App) {
-    // app.add_systems(
-    //     Update,
-    //     ().run_if(in_state(Screen::Playing)),
-    // );
+    app.add_systems(
+        Update,
+        (fade_stuff_you_cant_afford).run_if(in_state(Screen::Playing)),
+    );
 
     app.observe(on_new_shop);
     app.observe(on_purchase);
@@ -89,8 +101,13 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
     match upgrade_kind {
         UpgradeKind::None => BigUint::ZERO,
         UpgradeKind::AddSocket(upgrade) => {
-            let base_add_socket_cost = BigUint::from(5u32);
-            let scale_factor_per_level = 0.15;
+            let base_add_socket_cost = BigUint::from(4u32);
+            let scale_factor_per_level = match upgrade.level {
+                _ if upgrade.level <= 10 => 0.15,
+                _ if upgrade.level > 10 => 0.20,
+                _ => 0.15,
+            };
+
             multiply_biguint_with_float(
                 &base_add_socket_cost,
                 (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32),
@@ -105,14 +122,14 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
             SocketColor::PINK => BigUint::from(250u32),
         },
         UpgradeKind::AddRing(upgrade) => {
-            let base_add_ring_cost = BigUint::from(1000u32);
-            let scale_factor_per_level = 0.05;
+            let base_add_ring_cost = BigUint::from(800u32);
+            let scale_factor_per_level = 0.15;
 
             multiply_biguint_with_float(
                 &base_add_ring_cost,
                 (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32),
             )
-        },
+        }
         UpgradeKind::EnhanceColor(upgrade) => match upgrade.color {
             SocketColor::NONE => todo!(),
             SocketColor::BLUE => BigUint::from(1500u32),
@@ -132,9 +149,14 @@ pub fn multiply_biguint_with_float(bigint: &BigUint, float: f32) -> BigUint {
 }
 
 #[derive(Component)]
-struct UpgradeButtonsContainer;
+pub struct UpgradeButtonsContainer;
 
-fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: ResMut<Unlocks>) {
+fn on_new_shop(
+    trigger: Trigger<NewShop>,
+    mut commands: Commands,
+    mut unlocks: ResMut<Unlocks>,
+    font_handles: ResMut<HandleMap<FontKey>>,
+) {
     unlocks.0 = add_socket_unlocks();
     unlocks.0.extend(build_color_unlocks());
     unlocks.0.extend(build_ring_unlocks());
@@ -142,13 +164,7 @@ fn on_new_shop(trigger: Trigger<NewShop>, mut commands: Commands, mut unlocks: R
 
     let parent = trigger.event().parent;
     commands.entity(parent).with_children(|gameplay_parent| {
-        gameplay_parent
-            .upgrade_shop()
-            .with_children(|upgrade_shop_children| {
-                upgrade_shop_children
-                    .vertical_container(JustifyContent::Start)
-                    .insert(UpgradeButtonsContainer);
-            });
+        gameplay_parent.upgrade_shop(font_handles[&FontKey::Default].clone());
     });
 
     commands.trigger(Purchase {
@@ -186,28 +202,28 @@ fn add_socket_unlocks() -> Vec<Unlock> {
 
 fn build_ring_unlocks() -> Vec<Unlock> {
     (0..64)
-    .collect::<Vec<usize>>()
-    .iter()
-    .map(|elem| {
-        if *elem == 0 {
-            Unlock {
-                when: vec![UpgradeKind::AddColor(AddColorUpgrade {
-                    color: SocketColor::PINK,
-                })],
-                then: UpgradeKind::AddRing(AddRingUpgrade { level: 1 }),
+        .collect::<Vec<usize>>()
+        .iter()
+        .map(|elem| {
+            if *elem == 0 {
+                Unlock {
+                    when: vec![UpgradeKind::AddColor(AddColorUpgrade {
+                        color: SocketColor::PINK,
+                    })],
+                    then: UpgradeKind::AddRing(AddRingUpgrade { level: 1 }),
+                }
+            } else {
+                Unlock {
+                    when: vec![UpgradeKind::AddRing(AddRingUpgrade {
+                        level: *elem as u32,
+                    })],
+                    then: UpgradeKind::AddRing(AddRingUpgrade {
+                        level: *elem as u32 + 1,
+                    }),
+                }
             }
-        } else {
-            Unlock {
-                when: vec![UpgradeKind::AddRing(AddRingUpgrade {
-                    level: *elem as u32,
-                })],
-                then: UpgradeKind::AddRing(AddRingUpgrade {
-                    level: *elem as u32 + 1,
-                }),
-            }
-        }
-    })
-    .collect()
+        })
+        .collect()
 }
 
 fn build_color_unlocks() -> Vec<Unlock> {
@@ -251,29 +267,29 @@ fn build_color_enhance_unlocks() -> Vec<Unlock> {
             when: vec![UpgradeKind::AddRing(AddRingUpgrade { level: 1 })],
             then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::BLUE,
-                tier: 1
+                tier: 1,
             }),
         },
         Unlock {
             when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::BLUE,
-                tier: 1
+                tier: 1,
             })],
             then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::RED,
-                tier: 1
+                tier: 1,
             }),
         },
         Unlock {
             when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::RED,
-                tier: 1
+                tier: 1,
             })],
             then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::GREEN,
-                tier: 1
+                tier: 1,
             }),
-        }
+        },
     ]
 }
 
@@ -370,7 +386,7 @@ fn on_purchase(
 
             let socket_ui_material = socket_ui_materials.add(SocketUiMaterial {
                 bevel_color: BLACK.into(),
-                inserted_color: map_socket_color(color_upgrade.color), 
+                inserted_color: map_socket_color(color_upgrade.color),
             });
 
             let hotkey = map_socket_color_hotkey(color_upgrade.color);
@@ -378,7 +394,11 @@ fn on_purchase(
             commands
                 .entity(hotbar_entity)
                 .with_children(|hotbar_children| {
-                    hotbar_children.hotbar_button(socket_ui_material, format!("{}.", hotkey), hotkey - 1);
+                    hotbar_children.hotbar_button(
+                        socket_ui_material,
+                        format!("{}.", hotkey),
+                        hotkey - 1,
+                    );
                 });
         }
         UpgradeKind::AddRing(_) => {
@@ -386,23 +406,20 @@ fn on_purchase(
             let any_existing_ring = q_rings.iter().next().unwrap();
 
             spawn_ring(
-                &mut commands, 
+                &mut commands,
                 ring_index,
                 gameplay_meshes.quad512.clone(),
-                gameplay_meshes.quad64.clone(), 
+                gameplay_meshes.quad64.clone(),
                 ring_materials.add(RingMaterial {
                     data: Vec4::new(RING_RADIUS, RING_THICKNESS, 0., 0.),
                 }),
-                socket_materials, 
+                socket_materials,
                 any_existing_ring.1.sockets.len(),
-                time, 
+                time,
                 existing_ring_count,
             )
-        },
-        UpgradeKind::EnhanceColor(_) => {
-            
-        },
-        
+        }
+        UpgradeKind::EnhanceColor(_) => {}
     }
 
     // 2. Unlock what is available now
@@ -425,7 +442,8 @@ fn on_purchase(
                     };
 
                     let mut button_entity_commands = button_container.shop_button(
-                        upgrade_text(&new_upgrade),
+                        &new_upgrade.cost,
+                        upgrade_description(&new_upgrade),
                         font_handles[&FontKey::Default].clone(),
                     );
                     let button_entity = button_entity_commands.id();
@@ -449,26 +467,59 @@ fn on_purchase(
     }
 }
 
-fn upgrade_text(upgrade: &Upgrade) -> impl Into<String> {
+fn fade_stuff_you_cant_afford(
+    currency: Res<Currency>,
+    mut q_shop_button: Query<(&mut BackgroundColor, &mut InteractionPalette, &mut BorderColor, &ShopButton, &Interaction)>,
+) {
+    let default_palette = InteractionPalette {
+        none: GRAY_700.into(),
+        hovered: GRAY_600.into(),
+        pressed: GRAY_500.into(),
+    };
+
+    let disabled_palette = InteractionPalette {
+        none: GRAY_900.into(),
+        hovered: GRAY_900.into(),
+        pressed: GRAY_900.into(),
+    };
+
+    for (mut bg_color, mut palette, mut border_color, button, interaction) in q_shop_button.iter_mut() {
+        if button.price > currency.amount {
+            *palette = disabled_palette.clone();
+            *border_color = BorderColor(GRAY_700.into());
+            *bg_color = BackgroundColor(disabled_palette.none);
+        } else {
+            *palette = default_palette.clone();
+
+            if *interaction == Interaction::None {
+                *border_color = BorderColor(GRAY_400.into());
+                *bg_color = BackgroundColor(default_palette.none);
+            }
+        }
+    }
+}
+
+fn upgrade_description(upgrade: &Upgrade) -> impl Into<String> {
     let description = match upgrade.upgrade_kind {
         UpgradeKind::None => "Errmm.. This shouldn't be for sale",
         UpgradeKind::AddSocket(_) => "Add a socket",
         UpgradeKind::AddColor(upgrade) => &format!("Add {} orbs", upgrade.color.as_str()),
         UpgradeKind::AddRing(_) => "Add a ring",
-        UpgradeKind::EnhanceColor(upgrade) => {
-            match upgrade {
-                EnhanceColorUpgrade { color: SocketColor::BLUE, tier: 1 } => {
-                    "BLUE orbs new behavior"
-                },
-                EnhanceColorUpgrade { color: SocketColor::RED, tier: 1 } => {
-                    "RED orbs new behavior"
-                },
-                EnhanceColorUpgrade { color: SocketColor::GREEN, tier: 1 } => {
-                    "GREEN orbs new behavior"
-                },
-                _ => "You are seeing this message because I made a mistake."
-            }
+        UpgradeKind::EnhanceColor(upgrade) => match upgrade {
+            EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 1,
+            } => "BLUE orbs new behavior",
+            EnhanceColorUpgrade {
+                color: SocketColor::RED,
+                tier: 1,
+            } => "RED orbs new behavior",
+            EnhanceColorUpgrade {
+                color: SocketColor::GREEN,
+                tier: 1,
+            } => "GREEN orbs new behavior",
+            _ => "You are seeing this message because I made a mistake.",
         },
     };
-    format!("${} | {}", upgrade.cost, description)
+    format!("{}", description)
 }

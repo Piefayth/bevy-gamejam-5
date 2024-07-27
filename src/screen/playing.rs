@@ -3,7 +3,7 @@
 use std::{f32::consts::PI, time::Duration};
 
 use bevy::{
-    color::palettes::css::{BLACK, BLUE, LIGHT_GREEN, ORANGE, PINK, RED, WHITE, YELLOW},
+    color::palettes::{css::{BLACK, BLUE, LIGHT_GREEN, ORANGE, PINK, RED, WHITE, YELLOW}, tailwind::CYAN_400},
     prelude::*,
     sprite::MaterialMesh2dBundle,
 };
@@ -72,12 +72,12 @@ fn enter_playing(
         .ui_root()
         .insert(StateScoped(Screen::Playing))
         .with_children(|root_children| {
-            let mut gameplay_wrapper_commands = root_children.horizontal_container();
+            let mut gameplay_wrapper_commands = root_children.horizontal_container(JustifyContent::Start, AlignItems::Start);
             gameplay_wrapper = gameplay_wrapper_commands.id();
             gameplay_wrapper_commands.with_children(|gameplay_wrapper_children| {
                 // two children, the upgrade shop and the remaining layout
                 gameplay_wrapper_children
-                    .vertical_container(JustifyContent::SpaceBetween)
+                    .vertical_container(JustifyContent::SpaceBetween, Val::Px(0.))
                     .with_children(|score_and_hotbar_wrapper| {
                         // two children, the score display and the hotbar
                         score_and_hotbar_wrapper
@@ -85,7 +85,7 @@ fn enter_playing(
 
                         let hotbar_first_position_socket_color = SocketColor::BLUE;
                         score_and_hotbar_wrapper
-                            .vertical_container(JustifyContent::End)
+                            .vertical_container(JustifyContent::End, Val::Px(0.))
                             .with_children(|hotbar_wrapper_children| {
                                 // need to be different materials, even though right now they have the same values
                                 let button_socket_material = materials.add(SocketUiMaterial {
@@ -373,8 +373,6 @@ fn on_socket_triggered(
                                 socket: next_index,
                             });
                         }
-
-
                     }
                 }
                 SocketColor::GREEN => {
@@ -449,7 +447,7 @@ fn on_socket_triggered(
 
                     for socket_entity in &ring.sockets {
                         let (_, mut socket, socket_mat_handle, _) = q_socket.get_mut(*socket_entity).expect("Non-Socket in Ring sockets vec.");
-                        if socket.last_triggered_time_seconds > 0. {
+                        if socket.last_triggered_time_seconds > 0. && socket.index != trigger.event().socket {
                             let socket_material = materials.get_mut(socket_mat_handle).unwrap();
     
                             socket.last_triggered_time_seconds -= reduce_cooldown_effect.amount;
@@ -541,7 +539,7 @@ fn on_cycle_complete(
             2.,
             200.,
             TextScrollDirection::UP,
-            LIGHT_GREEN.into(),
+            ORANGE.into(),
             time.elapsed_seconds(),
             font_handles[&FontKey::Default].clone(),
             36.,
@@ -564,7 +562,7 @@ fn on_cycle_complete(
             2.,
             200.,
             TextScrollDirection::UP,
-            LIGHT_GREEN.into(),
+            ORANGE.into(),
             time.elapsed_seconds(),
             font_handles[&FontKey::Default].clone(),
             20.,
@@ -599,7 +597,7 @@ fn bonus_text(bonus: &CycleBonus) -> String {
 
 fn bonus_color(bonus: &CycleBonus) -> LinearRgba {
     match bonus {
-        CycleBonus::Overflow(_) => PINK.into(),
+        CycleBonus::Overflow(_) => CYAN_400.into(),
     }
 }
 

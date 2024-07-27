@@ -1,18 +1,20 @@
 use bevy::{
-    color::palettes::css::{BLACK, WHITE},
+    color::palettes::{css::{BLACK, WHITE, WHITE_SMOKE}, tailwind::{GRAY_300, GRAY_400, GRAY_900}},
     input::keyboard::Key,
     prelude::*,
 };
 
 use crate::{game::{materials::materials::SocketUiMaterial, spawn::level::{map_socket_color, SocketColor}}, screen::Screen};
 
-use super::{shop::{EnhanceColorUpgrade, UpgradeHistory, UpgradeKind}, widgets::{Hotbar, HotbarButton, HotbarDescriptionIcon, HotbarDescriptionText}};
+use super::{shop::{EnhanceColorUpgrade, UpgradeHistory, UpgradeKind}, widgets::{Hotbar, HotbarButton, HotbarChanged, HotbarDescriptionIcon, HotbarDescriptionText}};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (update_hotbar_text, update_hotbar_selection, update_hotbar_style).run_if(in_state(Screen::Playing)),
     );
+
+    app.observe(on_hotbar_changed);
 }
 
 fn update_hotbar_selection(keys: Res<ButtonInput<KeyCode>>, mut query: Query<&mut Hotbar>) {
@@ -39,6 +41,14 @@ fn update_hotbar_selection(keys: Res<ButtonInput<KeyCode>>, mut query: Query<&mu
             hotbar.selected_index = 9;
         }
     }
+}
+
+fn on_hotbar_changed(
+    trigger: Trigger<HotbarChanged>,
+    mut q_hotbar: Query<&mut Hotbar>
+) {
+    let mut hotbar = q_hotbar.single_mut();
+    hotbar.selected_index = trigger.event().index;
 }
 
 fn update_hotbar_text(
@@ -112,9 +122,9 @@ fn update_hotbar_style(
 
     for (hotbar_button, mut border_color) in q_hotbar_button.iter_mut() {
         if hotbar_button.index == hotbar.selected_index {
-            *border_color = WHITE.into();
+            *border_color = GRAY_400.into();
         } else {
-            *border_color = BLACK.into();
+            *border_color = GRAY_900.into();
         }
     }
 }

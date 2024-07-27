@@ -11,7 +11,7 @@ pub type InteractionQuery<'w, 's, T> =
     Query<'w, 's, (&'static Interaction, T), Changed<Interaction>>;
 
 /// Palette for widget interactions.
-#[derive(Component, Debug, Reflect)]
+#[derive(Component, Debug, Reflect, Clone)]
 #[reflect(Component)]
 pub struct InteractionPalette {
     pub none: Color,

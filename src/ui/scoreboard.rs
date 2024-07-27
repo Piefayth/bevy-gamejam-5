@@ -6,7 +6,7 @@ use crate::{
     screen::{playing::Currency, Screen},
 };
 
-use super::widgets::{CurrencyText, CyclesCountText};
+use super::widgets::{CurrencyText, CyclesCountText, PendingCurrencyText};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
@@ -31,18 +31,29 @@ fn update_cycles(
         .fold(BigUint::ZERO, |acc, ring| acc + &ring.cycle_count);
 
     if total_cycles != *old_count {
-        cycle_count_text.sections[0].value = format!("Cycle {}", total_cycles)
+        cycle_count_text.sections[0].value = format!("{}", total_cycles)
     }
 }
 
-fn update_currency(currency: Res<Currency>, q_rings: Query<&Ring>, mut q_text: Query<&mut Text, With<CurrencyText>>) {
-    let total_pending_amount = q_rings.iter().fold(BigUint::ZERO, |acc, ring| {
-        acc + &ring.pending_amount
-    });
-    let mut currency_text = q_text.single_mut();
+fn update_currency(
+    currency: Res<Currency>,
+    q_rings: Query<&Ring>,
+    mut q_currency_text: Query<&mut Text, With<CurrencyText>>,
+    mut q_pending_currency_text: Query<&mut Text, (With<PendingCurrencyText>, Without<CurrencyText>)>,
+) {
+    let total_pending_amount = q_rings
+        .iter()
+        .fold(BigUint::ZERO, |acc, ring| acc + &ring.pending_amount);
+    let mut currency_text = q_currency_text.single_mut();
+    let mut pending_currency_text = q_pending_currency_text.single_mut();
+
     currency_text.sections[0].value = format!(
-        "${} (Pending ${})",
+        "${} ",
         currency.amount,
-        total_pending_amount.to_string()
+    );
+
+    pending_currency_text.sections[0].value = format!(
+        " ${}",
+        total_pending_amount
     );
 }
