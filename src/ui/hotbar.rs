@@ -99,7 +99,7 @@ pub fn map_socket_color_description_text(socket_color: SocketColor, upgrade_hist
                 format!("Grants ${} for each trigger in the ring's previous cycle.", 1.)
             }
         },
-        SocketColor::ORANGE => format!("Reduces the cooldown of all sockets in the ring by {} second(s).", 1.),
+        SocketColor::ORANGE => format!("Reduces the cooldown of all sockets in the ring by {} second(s).", 0.5),
         SocketColor::PINK => format!("When triggered, increases the cycle's multiplier by {}.", 1.),
     }
 }

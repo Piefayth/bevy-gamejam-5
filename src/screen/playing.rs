@@ -31,6 +31,7 @@ use crate::ui::prelude::*;
 #[derive(Resource, Default)]
 pub struct Currency {
     pub amount: BigUint,
+    pub pending_amount: BigUint,
 }
 
 pub(super) fn plugin(app: &mut App) {
@@ -291,6 +292,7 @@ fn on_socket_triggered(
     upgrade_history: Res<UpgradeHistory>,
     font_handles: ResMut<HandleMap<FontKey>>,
     blue_orb_count: ResMut<BlueOrbCount>,
+    currency: Res<Currency>,
     time: Res<Time>,
 ) {
     let (ring_entity, mut ring, ring_transform) = q_ring
@@ -378,6 +380,14 @@ fn on_socket_triggered(
                 SocketColor::GREEN => {
                     let score_gained = ring.previous_cycle.len();
                     ring.cycle_score += score_gained;
+
+                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                        color: SocketColor::GREEN,
+                        tier: 1,
+                    })) {
+                        let pending_amount_percentage_reward = 0.1;
+                        ring.cycle_score += multiply_biguint_with_float(&currency.pending_amount, pending_amount_percentage_reward);
+                    }
                 }
                 SocketColor::ORANGE => {
                     pending_socket_effects.push(SocketEffect::ReduceCooldown(ReduceCooldownEffect {
@@ -432,18 +442,6 @@ fn on_socket_triggered(
 
     // Second block, mutate the other sockets
     {
-        // for socket_entity in &ring.sockets {
-        //     // the triggered socket can't apply an effect to itself
-        //     if *socket_entity == ring.sockets[trigger.event().socket] {
-        //         continue;
-        //     }
-
-        //     let (_, mut socket, socket_mat_handle, _) = q_socket
-        //         .get_mut(*socket_entity)
-        //         .expect("Socket in sockets array pls");
-
-        // }
-
         for effect in &pending_socket_effects {
             match effect {
                 SocketEffect::ReduceCooldown(reduce_cooldown_effect) => {

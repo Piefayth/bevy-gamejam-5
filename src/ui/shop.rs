@@ -102,7 +102,7 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
             SocketColor::RED => BigUint::from(15u32),
             SocketColor::GREEN => BigUint::from(40u32),
             SocketColor::ORANGE => BigUint::from(100u32),
-            SocketColor::PINK => BigUint::from(300u32),
+            SocketColor::PINK => BigUint::from(250u32),
         },
         UpgradeKind::AddRing(upgrade) => {
             let base_add_ring_cost = BigUint::from(1000u32);
@@ -117,9 +117,9 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
             SocketColor::NONE => todo!(),
             SocketColor::BLUE => BigUint::from(1500u32),
             SocketColor::RED => BigUint::from(4000u32),
-            SocketColor::GREEN => todo!(),
-            SocketColor::ORANGE => todo!(),
-            SocketColor::PINK => todo!(),
+            SocketColor::GREEN => BigUint::from(20000u32),
+            SocketColor::ORANGE => BigUint::from(100000u32),
+            SocketColor::PINK => BigUint::from(1000000u32),
         },
     }
 }
@@ -261,6 +261,16 @@ fn build_color_enhance_unlocks() -> Vec<Unlock> {
             })],
             then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::RED,
+                tier: 1
+            }),
+        },
+        Unlock {
+            when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::RED,
+                tier: 1
+            })],
+            then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::GREEN,
                 tier: 1
             }),
         }
@@ -452,6 +462,9 @@ fn upgrade_text(upgrade: &Upgrade) -> impl Into<String> {
                 },
                 EnhanceColorUpgrade { color: SocketColor::RED, tier: 1 } => {
                     "RED orbs new behavior"
+                },
+                EnhanceColorUpgrade { color: SocketColor::GREEN, tier: 1 } => {
+                    "GREEN orbs new behavior"
                 },
                 _ => "You are seeing this message because I made a mistake."
             }
