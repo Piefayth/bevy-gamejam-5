@@ -438,9 +438,11 @@ fn on_socket_triggered(
                 multiply_biguint_with_float(&ring.cycle_score, ring.cycle_multiplier); // TODO: have an update_currency_system that correctly updates pending...
 
             let socket_material = materials.get_mut(socket_mat_handle).unwrap();
-            socket_material.data[0] = time.elapsed_seconds();
-            socket_material.data[2] = time.elapsed_seconds();
-            socket.last_triggered_time_seconds = time.elapsed_seconds();
+            let wrapped_time = time.elapsed_seconds() % 3600.;   // ffs https://github.com/bevyengine/bevy/blob/bc80b95257af2f5a9c0567b6c7ef007497818f82/crates/bevy_render/src/globals.wgsl#L5
+            
+            socket_material.data[0] = wrapped_time;
+            socket_material.data[2] = wrapped_time;
+            socket.last_triggered_time_seconds = wrapped_time;
 
             let score_diff = &ring.cycle_score - old_score;
             let mult_diff = &ring.cycle_multiplier - old_multiplier;
@@ -769,6 +771,7 @@ fn despawn_after_system(
     }
 }
 
+
 pub fn format_scientific(num: &BigUint) -> String {
     let digits = num.to_str_radix(10);
     let len = digits.len();
@@ -778,12 +781,13 @@ pub fn format_scientific(num: &BigUint) -> String {
     }
 
     let mut digits = digits;
-    // Remove trailing zeroes
+    let original_len = digits.len();
+    
     digits = digits.trim_end_matches('0').to_string();
-    let len_adjusted = digits.len();
+    let significant_digits = digits.len();
 
-    if len_adjusted <= 4 {
-        return digits;
+    if significant_digits == 1 {
+        return format!("{}e{}", digits, original_len - 1);
     }
 
     digits.insert(1, '.');
@@ -793,5 +797,5 @@ pub fn format_scientific(num: &BigUint) -> String {
         digits
     };
 
-    format!("{}e{}", digits_with_precision, len_adjusted - 1)
+    format!("{}e{}", digits_with_precision, original_len - 1)
 }
