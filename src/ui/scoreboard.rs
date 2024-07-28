@@ -36,7 +36,7 @@ fn update_cycles(
 }
 
 fn update_currency(
-    currency: Res<Currency>,
+    mut currency: ResMut<Currency>,
     q_rings: Query<&Ring>,
     mut q_currency_text: Query<&mut Text, With<CurrencyText>>,
     mut q_pending_currency_text: Query<&mut Text, (With<PendingCurrencyText>, Without<CurrencyText>)>,
@@ -47,6 +47,8 @@ fn update_currency(
     let mut currency_text = q_currency_text.single_mut();
     let mut pending_currency_text = q_pending_currency_text.single_mut();
 
+    currency.pending_amount = total_pending_amount.clone();
+    
     currency_text.sections[0].value = format!(
         "${} ",
         currency.amount,

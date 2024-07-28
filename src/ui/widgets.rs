@@ -26,7 +26,7 @@ use super::{interaction::InteractionPalette, palette::*, shop::UpgradeButtonsCon
 /// An extension trait for spawning UI widgets.
 pub trait Widgets {
     /// Spawn a simple button with text.
-    fn button(&mut self, text: impl Into<String>) -> EntityCommands;
+    fn button(&mut self, text: impl Into<String>, font: Handle<Font>) -> EntityCommands;
 
     /// Spawn a simple header label. Bigger than [`Widgets::label`].
     fn header(&mut self, text: impl Into<String>) -> EntityCommands;
@@ -79,24 +79,26 @@ pub trait Widgets {
 }
 
 impl<T: Spawn> Widgets for T {
-    fn button(&mut self, text: impl Into<String>) -> EntityCommands {
+    fn button(&mut self, text: impl Into<String>, font: Handle<Font>) -> EntityCommands {
         let mut entity = self.spawn((
             Name::new("Button"),
             ButtonBundle {
                 style: Style {
-                    width: Px(200.0),
-                    height: Px(65.0),
+                    width: Px(150.0),
+                    height: Px(45.0),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
+                    border: UiRect::all(Px(1.)),
                     ..default()
                 },
-                background_color: BackgroundColor(NODE_BACKGROUND),
+                background_color: GRAY_700.into(),
+                border_color: GRAY_400.into(),
                 ..default()
             },
             InteractionPalette {
-                none: NODE_BACKGROUND,
-                hovered: BUTTON_HOVERED_BACKGROUND,
-                pressed: BUTTON_PRESSED_BACKGROUND,
+                none: GRAY_700.into(),
+                hovered: GRAY_600.into(),
+                pressed: GRAY_500.into(),
             },
         ));
         entity.with_children(|children| {
@@ -105,7 +107,8 @@ impl<T: Spawn> Widgets for T {
                 TextBundle::from_section(
                     text,
                     TextStyle {
-                        font_size: 40.0,
+                        font_size: 26.0,
+                        font: font,
                         color: BUTTON_TEXT,
                         ..default()
                     },

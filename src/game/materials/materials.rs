@@ -44,6 +44,9 @@ pub struct SocketUiMaterial {
 
     #[uniform(0)]
     pub bevel_color: LinearRgba,
+
+    #[uniform(0)]
+    pub data: Vec4,
 }
 
 impl UiMaterial for SocketUiMaterial {

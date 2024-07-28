@@ -3,7 +3,10 @@
 use std::{f32::consts::PI, time::Duration};
 
 use bevy::{
-    color::palettes::{css::{BLACK, BLUE, LIGHT_GREEN, ORANGE, PINK, RED, WHITE, YELLOW}, tailwind::CYAN_400},
+    color::palettes::{
+        css::{BLACK, BLUE, LIGHT_GREEN, ORANGE, PINK, RED, WHITE, YELLOW},
+        tailwind::CYAN_400,
+    },
     prelude::*,
     sprite::MaterialMesh2dBundle,
 };
@@ -17,12 +20,16 @@ use crate::{
         audio::soundtrack::PlaySoundtrack,
         materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial},
         spawn::level::{
-            get_grid_coordinates, map_socket_color, map_socket_color_hotkey, map_socket_color_trigger_duration, map_socket_highlight_color, GameplayMeshes, Ring, RingIndex, Socket, SocketColor, SpawnLevel
+            get_grid_coordinates, map_socket_color, map_socket_color_hotkey,
+            map_socket_color_trigger_duration, map_socket_highlight_color, GameplayMeshes, Ring,
+            RingIndex, Socket, SocketColor, SpawnLevel,
         },
     },
     ui::{
         hotbar::map_socket_color_description_text,
-        shop::{multiply_biguint_with_float, EnhanceColorUpgrade, NewShop, UpgradeHistory, UpgradeKind},
+        shop::{
+            multiply_biguint_with_float, EnhanceColorUpgrade, NewShop, UpgradeHistory, UpgradeKind,
+        },
     },
 };
 
@@ -40,14 +47,12 @@ pub(super) fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (
-            (   
-                count_blue_orbs,
-                (progress_cycle, ring_cycle_display).chain(),
-                despawn_after_system,
-            )
-                .run_if(in_state(Screen::Playing)),
-        ),
+        ((
+            count_blue_orbs,
+            (progress_cycle, ring_cycle_display).chain(),
+            despawn_after_system,
+        )
+            .run_if(in_state(Screen::Playing)),),
     );
 
     app.init_resource::<Currency>();
@@ -72,7 +77,8 @@ fn enter_playing(
         .ui_root()
         .insert(StateScoped(Screen::Playing))
         .with_children(|root_children| {
-            let mut gameplay_wrapper_commands = root_children.horizontal_container(JustifyContent::Start, AlignItems::Start);
+            let mut gameplay_wrapper_commands =
+                root_children.horizontal_container(JustifyContent::Start, AlignItems::Start);
             gameplay_wrapper = gameplay_wrapper_commands.id();
             gameplay_wrapper_commands.with_children(|gameplay_wrapper_children| {
                 // two children, the upgrade shop and the remaining layout
@@ -88,17 +94,30 @@ fn enter_playing(
                             .vertical_container(JustifyContent::End, Val::Px(0.))
                             .with_children(|hotbar_wrapper_children| {
                                 // need to be different materials, even though right now they have the same values
+                                let socket_color =
+                                    map_socket_color(hotbar_first_position_socket_color);
+
                                 let button_socket_material = materials.add(SocketUiMaterial {
                                     bevel_color: BLACK.into(),
-                                    inserted_color: map_socket_color(
-                                        hotbar_first_position_socket_color,
+                                    inserted_color: socket_color,
+                                    data: Vec4::new(
+                                        (hotbar_first_position_socket_color as u8).saturating_sub(1)
+                                            as f32,
+                                        0.,
+                                        0.,
+                                        0.,
                                     ),
                                 });
 
                                 let description_socket_material = materials.add(SocketUiMaterial {
                                     bevel_color: BLACK.into(),
-                                    inserted_color: map_socket_color(
-                                        hotbar_first_position_socket_color,
+                                    inserted_color: socket_color,
+                                    data: Vec4::new(
+                                        (hotbar_first_position_socket_color as u8).saturating_sub(1)
+                                            as f32,
+                                        0.,
+                                        0.,
+                                        0.,
                                     ),
                                 });
 
@@ -181,7 +200,7 @@ fn ring_cycle_display(
                                         -1.,
                                         map_socket_color_trigger_duration(socket_color),
                                         0.,
-                                        0.,
+                                        (socket_color as u8).saturating_sub(1) as f32,
                                     ),
                                 }),
                                 transform: Transform::from_translation(
@@ -252,7 +271,6 @@ pub struct CycleComplete {
     new_cycle_start_seconds: f32,
 }
 
-
 pub struct ReduceCooldownEffect {
     pub ring: Entity,
     pub amount: f32,
@@ -274,7 +292,9 @@ fn count_blue_orbs(
 
     for ring in &q_ring {
         for socket_entity in &ring.sockets {
-            let socket = q_socket.get(*socket_entity).expect("Ring.sockets member should have Socket component.");
+            let socket = q_socket
+                .get(*socket_entity)
+                .expect("Ring.sockets member should have Socket component.");
             if socket.color == SocketColor::BLUE {
                 count.0 += 1;
             }
@@ -303,8 +323,9 @@ fn on_socket_triggered(
 
     // First block, mutate the triggered socket
     {
-        let (socket_entity, mut socket, socket_mat_handle, socket_transform) =
-            q_socket.get_mut(ring.sockets[trigger.event().socket]).expect(
+        let (socket_entity, mut socket, socket_mat_handle, socket_transform) = q_socket
+            .get_mut(ring.sockets[trigger.event().socket])
+            .expect(
                 "SocketTriggered.socket should've referenced an Entity with a Socket component.",
             );
 
@@ -320,10 +341,12 @@ fn on_socket_triggered(
 
             match socket.color {
                 SocketColor::BLUE => {
-                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
-                        color: SocketColor::BLUE,
-                        tier: 1,
-                    })) {
+                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
+                        EnhanceColorUpgrade {
+                            color: SocketColor::BLUE,
+                            tier: 1,
+                        },
+                    )) {
                         ring.cycle_score += BigUint::from(blue_orb_count.0);
                     } else {
                         ring.cycle_score += BigUint::from(1u32);
@@ -342,34 +365,39 @@ fn on_socket_triggered(
                         ring: ring_entity,
                     });
 
-                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
-                        color: SocketColor::RED,
-                        tier: 1,
-                    })) {
+                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
+                        EnhanceColorUpgrade {
+                            color: SocketColor::RED,
+                            tier: 1,
+                        },
+                    )) {
                         let ring_grid_coordinates = get_grid_coordinates(ring.index);
                         let right_neighbor_coordinates = &(ring_grid_coordinates + IVec2::X);
                         let left_neighbor_coordinates = &(ring_grid_coordinates - IVec2::X);
 
-                        if let Some(neighbor_ring) = ring_index.rings.get(right_neighbor_coordinates) {
+                        if let Some(neighbor_ring) =
+                            ring_index.rings.get(right_neighbor_coordinates)
+                        {
                             commands.trigger(SocketTriggered {
-                                ring: *neighbor_ring, 
+                                ring: *neighbor_ring,
                                 socket: prev_index,
                             });
 
                             commands.trigger(SocketTriggered {
-                                ring: *neighbor_ring, 
+                                ring: *neighbor_ring,
                                 socket: next_index,
                             });
                         }
 
-                        if let Some(neighbor_ring) = ring_index.rings.get(left_neighbor_coordinates) {
+                        if let Some(neighbor_ring) = ring_index.rings.get(left_neighbor_coordinates)
+                        {
                             commands.trigger(SocketTriggered {
-                                ring: *neighbor_ring, 
+                                ring: *neighbor_ring,
                                 socket: prev_index,
                             });
 
                             commands.trigger(SocketTriggered {
-                                ring: *neighbor_ring, 
+                                ring: *neighbor_ring,
                                 socket: next_index,
                             });
                         }
@@ -379,19 +407,26 @@ fn on_socket_triggered(
                     let score_gained = ring.previous_cycle.len();
                     ring.cycle_score += score_gained;
 
-                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
-                        color: SocketColor::GREEN,
-                        tier: 1,
-                    })) {
+                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
+                        EnhanceColorUpgrade {
+                            color: SocketColor::GREEN,
+                            tier: 1,
+                        },
+                    )) {
                         let pending_amount_percentage_reward = 0.1;
-                        ring.cycle_score += multiply_biguint_with_float(&currency.pending_amount, pending_amount_percentage_reward);
+                        ring.cycle_score += multiply_biguint_with_float(
+                            &currency.pending_amount,
+                            pending_amount_percentage_reward,
+                        );
                     }
                 }
                 SocketColor::ORANGE => {
-                    pending_socket_effects.push(SocketEffect::ReduceCooldown(ReduceCooldownEffect {
-                        ring: ring_entity,
-                        amount: 0.5
-                    }));
+                    pending_socket_effects.push(SocketEffect::ReduceCooldown(
+                        ReduceCooldownEffect {
+                            ring: ring_entity,
+                            amount: 0.5,
+                        },
+                    ));
                 }
                 SocketColor::NONE => panic!("Shouldn't get points for an empty socket."),
                 SocketColor::PINK => {
@@ -399,10 +434,12 @@ fn on_socket_triggered(
                 }
             }
 
-            ring.pending_amount = multiply_biguint_with_float(&ring.cycle_score, ring.cycle_multiplier); // TODO: have an update_currency_system that correctly updates pending...
+            ring.pending_amount =
+                multiply_biguint_with_float(&ring.cycle_score, ring.cycle_multiplier); // TODO: have an update_currency_system that correctly updates pending...
 
             let socket_material = materials.get_mut(socket_mat_handle).unwrap();
             socket_material.data[0] = time.elapsed_seconds();
+            socket_material.data[2] = time.elapsed_seconds();
             socket.last_triggered_time_seconds = time.elapsed_seconds();
 
             let score_diff = &ring.cycle_score - old_score;
@@ -443,22 +480,26 @@ fn on_socket_triggered(
         for effect in &pending_socket_effects {
             match effect {
                 SocketEffect::ReduceCooldown(reduce_cooldown_effect) => {
-                    let (_, ring, _) = q_ring.get(reduce_cooldown_effect.ring).expect("Had a reduce cooldown effect with an invalid ring reference.");
+                    let (_, ring, _) = q_ring
+                        .get(reduce_cooldown_effect.ring)
+                        .expect("Had a reduce cooldown effect with an invalid ring reference.");
 
                     for socket_entity in &ring.sockets {
-                        let (_, mut socket, socket_mat_handle, _) = q_socket.get_mut(*socket_entity).expect("Non-Socket in Ring sockets vec.");
-                        if socket.last_triggered_time_seconds > 0. && socket.index != trigger.event().socket {
+                        let (_, mut socket, socket_mat_handle, _) = q_socket
+                            .get_mut(*socket_entity)
+                            .expect("Non-Socket in Ring sockets vec.");
+                        if socket.last_triggered_time_seconds > 0.
+                            && socket.index != trigger.event().socket
+                        {
                             let socket_material = materials.get_mut(socket_mat_handle).unwrap();
-    
+
                             socket.last_triggered_time_seconds -= reduce_cooldown_effect.amount;
                             socket_material.data[0] -= reduce_cooldown_effect.amount;
                         }
                     }
-
                 }
             }
         }
-
     }
 }
 
@@ -504,10 +545,9 @@ fn on_cycle_complete(
         .iter()
         .fold(BigUint::ZERO, |acc, bonus| acc + score_bonus(bonus));
 
-    let cycle_score = multiply_biguint_with_float(
-        &(ring.cycle_score.clone()),
-        ring.cycle_multiplier,
-    ) + bonus_score;
+    let cycle_score =
+        multiply_biguint_with_float(&(ring.cycle_score.clone()), ring.cycle_multiplier)
+            + bonus_score;
 
     let old_multiplier = ring.cycle_multiplier;
     let unmultiplied_score = ring.cycle_score.clone();
@@ -553,10 +593,7 @@ fn on_cycle_complete(
 
         spawn_scrolling_text(
             &mut commands,
-            format!(
-                "${}x{}",
-                unmultiplied_score, old_multiplier
-            ),
+            format!("${}x{}", unmultiplied_score, old_multiplier),
             (ring_transform.translation.xy()).extend(100.)
                 + Vec3::Y * (50. - 25. * texts_above_bonus as f32),
             2.,

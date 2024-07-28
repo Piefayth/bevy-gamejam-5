@@ -387,6 +387,7 @@ fn on_purchase(
             let socket_ui_material = socket_ui_materials.add(SocketUiMaterial {
                 bevel_color: BLACK.into(),
                 inserted_color: map_socket_color(color_upgrade.color),
+                data: Vec4::new((color_upgrade.color as u8).saturating_sub(1) as f32, 0., 0., 0.)
             });
 
             let hotkey = map_socket_color_hotkey(color_upgrade.color);

@@ -4,7 +4,7 @@ use bevy::prelude::*;
 
 use super::Screen;
 use crate::{
-    game::{assets::SoundtrackKey, audio::soundtrack::PlaySoundtrack},
+    game::{assets::{FontKey, HandleMap, SoundtrackKey}, audio::soundtrack::PlaySoundtrack},
     ui::prelude::*,
 };
 
@@ -25,7 +25,7 @@ enum CreditsAction {
     Back,
 }
 
-fn enter_credits(mut commands: Commands) {
+fn enter_credits(mut commands: Commands,    font_handles: ResMut<HandleMap<FontKey>>,) {
     commands
         .ui_root()
         .insert(StateScoped(Screen::Credits))
@@ -36,7 +36,7 @@ fn enter_credits(mut commands: Commands) {
 
             children.header("Assets");
             children.label("Bevy logo - All rights reserved by the Bevy Foundation. Permission granted for splash screen use when unmodified.");
-            children.button("Back").insert(CreditsAction::Back);
+            children.button("Back", font_handles[&FontKey::Default].clone()).insert(CreditsAction::Back);
         });
 
     commands.trigger(PlaySoundtrack::Key(SoundtrackKey::Credits));

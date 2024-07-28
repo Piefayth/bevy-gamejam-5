@@ -125,7 +125,7 @@ fn spawn_level(
     time: Res<Time>,
 ) {
     if cfg!(feature = "dev") {
-        let large_number_str = "1000";
+        let large_number_str = "5000";
         let large_number = BigUint::parse_bytes(large_number_str.as_bytes(), 10)
             .expect("Failed to parse big number");
         currency.amount = large_number;
@@ -207,7 +207,7 @@ pub fn spawn_ring(
                             -1000.,
                             map_socket_color_trigger_duration(socket_color),
                             0.,
-                            0.,
+                            (socket_color as u8).saturating_sub(1) as f32,
                         ),
                     }),
                     socket_position(i, num_sockets).extend(1.),
@@ -352,7 +352,7 @@ pub fn map_socket_color(socket_color: SocketColor) -> LinearRgba {
 
 pub fn map_socket_color_trigger_duration(socket_color: SocketColor) -> f32 {
     match socket_color {
-        SocketColor::BLUE => 0.5,
+        SocketColor::BLUE => 0.4,
         SocketColor::NONE => 0.,
         SocketColor::RED => 3.,
         SocketColor::GREEN => 7.,
@@ -415,6 +415,7 @@ fn on_set_socket_color(
 
     material.inserted_color = map_socket_color(new_color);
     material.highlight_color = map_socket_highlight_color(new_color);
+    material.data[3] = (new_color as u8).saturating_sub(1) as f32;
 
     let current_time = time.elapsed_seconds();
     let cooldown_remaining =
