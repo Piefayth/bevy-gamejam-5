@@ -1,7 +1,7 @@
 use bevy::{
-    color::palettes::{css::WHITE, tailwind::{GRAY_600, GRAY_700}},
+    color::palettes::{css::{BLACK, WHITE}, tailwind::{GRAY_600, GRAY_700}},
     prelude::*,
-    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
+    sprite::{MaterialMesh2dBundle, Mesh2dHandle}, window::PrimaryWindow,
 };
 use bevy_mod_picking::{
     events::{Drag, Pointer},
@@ -12,7 +12,7 @@ use bevy_mod_picking::{
 use super::Screen;
 use crate::{
     game::{
-        assets::{FontKey, HandleMap}, materials::materials::{BackgroundMaterial, RingMaterial}, spawn::level::{spawn_ring, Ring, Socket, RING_RADIUS, RING_THICKNESS}
+        assets::{FontKey, HandleMap}, materials::materials::{BackgroundMaterial, RingMaterial, SocketMaterial}, spawn::level::{map_socket_color, map_socket_color_trigger_duration, map_socket_highlight_color, socket_position, spawn_ring, spawn_socket, Ring, Socket, SocketColor, RING_RADIUS, RING_THICKNESS}
     },
     ui::prelude::*,
 };
@@ -44,8 +44,14 @@ fn enter_title(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<BackgroundMaterial>>,
     font_handles: ResMut<HandleMap<FontKey>>,
+    mut q_windows: Query<&mut Window, With<PrimaryWindow>>,
     time: Res<Time>,
+    mut socket_materials: ResMut<Assets<SocketMaterial>>,
 ) {
+    let mut window = q_windows.single_mut();
+
+    window.title = "every few seconds".into();
+    
     commands
         .ui_root()
         .insert(StateScoped(Screen::Title))
@@ -135,8 +141,48 @@ fn enter_title(
         ..default()
     });
 
+    let mut starting_sockets: Vec<Entity> = vec![];
+    let num_sockets = 5;
+    let socket_colors = vec![
+        SocketColor::BLUE,
+        SocketColor::RED,
+        SocketColor::GREEN,
+        SocketColor::ORANGE,
+        SocketColor::PINK,
+    ];
+
+    commands
+        .entity(ring_entity)
+        .with_children(|ring_entity_children| {
+            for i in 0..num_sockets {
+                let socket_color = socket_colors[i];
+
+                let socket_entity = spawn_socket(
+                    ring_entity_children,
+                    socket_color.clone(),
+                    ring_entity,
+                    i,
+                    Mesh2dHandle(meshes.add(Rectangle::new(64.0, 64.0))),
+                    socket_materials.add(SocketMaterial {
+                        inserted_color: map_socket_color(socket_color),
+                        highlight_color: map_socket_highlight_color(socket_color),
+                        bevel_color: { BLACK.into() },
+                        data: Vec4::new(
+                            -1000.,
+                            map_socket_color_trigger_duration(socket_color),
+                            0.,
+                            (socket_color as u8).saturating_sub(1) as f32,
+                        ),
+                    }),
+                    socket_position(i, num_sockets).extend(1.),
+                );
+
+                starting_sockets.push(socket_entity);
+            }
+        });
+
     commands.entity(ring_entity).insert(Ring {
-        sockets: vec![],
+        sockets: starting_sockets,
         cycle_duration: 4.,
         cycle_start_seconds: time.elapsed_seconds(),
         cycle_multiplier: 1.,
