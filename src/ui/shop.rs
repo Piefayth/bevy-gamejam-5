@@ -4,9 +4,7 @@ use bevy::{
     color::palettes::{
         css::BLACK,
         tailwind::{GRAY_400, GRAY_500, GRAY_600, GRAY_700, GRAY_800, GRAY_900},
-    },
-    prelude::*,
-    utils::HashSet,
+    }, math::VectorSpace, prelude::*, utils::HashSet
 };
 use bevy_mod_picking::{
     events::{Click, Pointer},
@@ -363,6 +361,7 @@ fn on_purchase(
                     highlight_color: map_socket_highlight_color(SocketColor::NONE),
                     bevel_color: { BLACK.into() },
                     data: Vec4::new(-1000., socket_trigger_duration, 0., 0.),
+                    data2: Vec4::ZERO,
                 });
 
                 commands

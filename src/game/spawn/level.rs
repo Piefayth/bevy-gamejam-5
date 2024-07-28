@@ -122,7 +122,7 @@ fn spawn_level(
     time: Res<Time>,
 ) {
     if cfg!(feature = "dev") {
-        let large_number_str = "500000000";
+        let large_number_str = "500000";
         let large_number = BigUint::parse_bytes(large_number_str.as_bytes(), 10)
             .expect("Failed to parse big number");
         currency.amount = large_number;
@@ -206,6 +206,7 @@ pub fn spawn_ring(
                             0.,
                             (socket_color as u8).saturating_sub(1) as f32,
                         ),
+                        data2: Vec4::ZERO,
                     }),
                     socket_position(i, num_sockets).extend(1.),
                 );
@@ -415,13 +416,12 @@ fn on_set_socket_color(
     material.highlight_color = map_socket_highlight_color(new_color);
     material.data[3] = (new_color as u8).saturating_sub(1) as f32;
 
-    let wrapped_time = time.elapsed_seconds() % 3600.;
-
+    let current_time = time.elapsed_seconds();
     let cooldown_remaining =
-        (socket.last_triggered_time_seconds + socket.trigger_duration_seconds) - wrapped_time;
+        (socket.last_triggered_time_seconds + socket.trigger_duration_seconds) - current_time;
 
     if cooldown_remaining > 0. {
-        let new_cooldown_end = wrapped_time + new_trigger_duration;
+        let new_cooldown_end = current_time + new_trigger_duration;
         let old_cooldown_end = socket.last_triggered_time_seconds + socket.trigger_duration_seconds;
 
         if new_cooldown_end < old_cooldown_end {
@@ -429,8 +429,8 @@ fn on_set_socket_color(
             material.data[0] = old_cooldown_end - new_trigger_duration;
         } else {
             socket.last_triggered_time_seconds =
-            wrapped_time - (new_trigger_duration - cooldown_remaining);
-            material.data[0] = wrapped_time - (new_trigger_duration - cooldown_remaining);
+                current_time - (new_trigger_duration - cooldown_remaining);
+            material.data[0] = current_time - (new_trigger_duration - cooldown_remaining);
         }
     } else {
         socket.last_triggered_time_seconds = 0.;

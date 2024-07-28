@@ -28,7 +28,10 @@ pub struct SocketMaterial {
     pub highlight_color: LinearRgba,
 
     #[uniform(3)]
-    pub data: Vec4 // [start time seconds, trigger_duration, padding, padding]
+    pub data: Vec4, // [start time seconds, trigger_duration, padding, padding]
+
+    #[uniform(4)]
+    pub data2: Vec4 // [time]
 }
 
 impl Material2d for SocketMaterial {

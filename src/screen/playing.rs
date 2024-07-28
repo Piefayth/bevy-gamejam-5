@@ -6,9 +6,7 @@ use bevy::{
     color::palettes::{
         css::{BLACK, BLUE, LIGHT_GREEN, ORANGE, PINK, RED, WHITE, YELLOW},
         tailwind::CYAN_400,
-    },
-    prelude::*,
-    sprite::MaterialMesh2dBundle,
+    }, math::VectorSpace, prelude::*, sprite::MaterialMesh2dBundle
 };
 use bevy_tweening::{lens::TransformPositionLens, Animator, EaseFunction, Tween};
 use num_bigint::BigUint;
@@ -51,6 +49,7 @@ pub(super) fn plugin(app: &mut App) {
             count_blue_orbs,
             (progress_cycle, ring_cycle_display).chain(),
             despawn_after_system,
+            update_socket_material_time
         )
             .run_if(in_state(Screen::Playing)),),
     );
@@ -202,6 +201,7 @@ fn ring_cycle_display(
                                         0.,
                                         (socket_color as u8).saturating_sub(1) as f32,
                                     ),
+                                    data2: Vec4::new(100000000000000000., 0., 0., 0.),
                                 }),
                                 transform: Transform::from_translation(
                                     ring_cycle_display_panel_position(
@@ -438,11 +438,10 @@ fn on_socket_triggered(
                 multiply_biguint_with_float(&ring.cycle_score, ring.cycle_multiplier); // TODO: have an update_currency_system that correctly updates pending...
 
             let socket_material = materials.get_mut(socket_mat_handle).unwrap();
-            let wrapped_time = time.elapsed_seconds() % 3600.;   // ffs https://github.com/bevyengine/bevy/blob/bc80b95257af2f5a9c0567b6c7ef007497818f82/crates/bevy_render/src/globals.wgsl#L5
             
-            socket_material.data[0] = wrapped_time;
-            socket_material.data[2] = wrapped_time;
-            socket.last_triggered_time_seconds = wrapped_time;
+            socket_material.data[0] = time.elapsed_seconds();
+            socket_material.data[2] = time.elapsed_seconds();
+            socket.last_triggered_time_seconds = time.elapsed_seconds();
 
             let score_diff = &ring.cycle_score - old_score;
             let mult_diff = &ring.cycle_multiplier - old_multiplier;
@@ -749,6 +748,25 @@ fn progress_cycle(
         }
 
         old_progress_pcts[ring.index] = progress_pct;
+    }
+}
+
+pub fn update_socket_material_time(
+    mut commands: Commands,
+    mut materials: ResMut<Assets<SocketMaterial>>,
+    q_socket: Query<(&Handle<SocketMaterial>)>,
+    q_ring: Query<(&mut Ring)>,
+    time: Res<Time>,
+) {
+    // it is unacceptable that globals.time wraps in the shader
+    // so we manually pass the real time
+
+    for ring in &q_ring {
+        for entity in &ring.sockets {
+            let handle = q_socket.get(*entity).unwrap();
+            let mat = materials.get_mut(handle).unwrap();
+            mat.data2 = Vec4::new(time.elapsed_seconds(), 0., 0., 0.)
+        }
     }
 }
 

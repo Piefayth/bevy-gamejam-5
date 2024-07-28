@@ -5,6 +5,7 @@
 @group(2) @binding(1) var<uniform> bevel_color: vec4<f32>;
 @group(2) @binding(2) var<uniform> highlight_color: vec4<f32>;
 @group(2) @binding(3) var<uniform> data: vec4<f32>; // trigger_time_seconds, trigger_duration_seconds, umodified_trigger_time_seconds, shape_selection
+@group(2) @binding(4) var<uniform> data2: vec4<f32>; // time, padding x3
 
 const BLACK = vec4<f32>(0., 0., 0., 1.);
 const WHITE =  vec4<f32>(1., 1., 1., 1.);
@@ -16,7 +17,7 @@ const TRIGGER_INDICATOR_DURATION_SECONDS = 0.25;
 @fragment
 fn fragment(mesh: VertexOutput) -> @location(0) vec4<f32> {
     let trigger_time = data[0];
-    let now = globals.time;
+    let now = data2[0];
     let trigger_duration = data[1];
     let unmod_trigger_time = data[2]; 
     let shape_selection = data[3]; // integer between 0 - 5

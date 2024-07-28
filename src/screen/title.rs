@@ -1,7 +1,5 @@
 use bevy::{
-    color::palettes::{css::{BLACK, WHITE}, tailwind::{GRAY_600, GRAY_700}},
-    prelude::*,
-    sprite::{MaterialMesh2dBundle, Mesh2dHandle}, window::PrimaryWindow,
+    color::palettes::{css::{BLACK, WHITE}, tailwind::{GRAY_600, GRAY_700}}, math::VectorSpace, prelude::*, sprite::{MaterialMesh2dBundle, Mesh2dHandle}, window::PrimaryWindow
 };
 use bevy_mod_picking::{
     events::{Drag, Pointer},
@@ -9,7 +7,7 @@ use bevy_mod_picking::{
     prelude::On,
 };
 
-use super::Screen;
+use super::{playing::update_socket_material_time, Screen};
 use crate::{
     game::{
         assets::{FontKey, HandleMap}, materials::materials::{BackgroundMaterial, RingMaterial, SocketMaterial}, spawn::level::{map_socket_color, map_socket_color_trigger_duration, map_socket_highlight_color, socket_position, spawn_ring, spawn_socket, Ring, Socket, SocketColor, RING_RADIUS, RING_THICKNESS}
@@ -22,7 +20,7 @@ pub(super) fn plugin(app: &mut App) {
     app.add_systems(OnExit(Screen::Title), exit_title);
 
     app.register_type::<TitleAction>();
-    app.add_systems(Update, (handle_title_action, cycle_title_ring).run_if(in_state(Screen::Title)));
+    app.add_systems(Update, (handle_title_action, cycle_title_ring, update_socket_material_time).run_if(in_state(Screen::Title)));
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Reflect)]
@@ -173,6 +171,7 @@ fn enter_title(
                             0.,
                             (socket_color as u8).saturating_sub(1) as f32,
                         ),
+                        data2: Vec4::ZERO,
                     }),
                     socket_position(i, num_sockets).extend(1.),
                 );
