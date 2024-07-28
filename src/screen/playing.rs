@@ -448,7 +448,7 @@ fn on_socket_triggered(
             if score_diff != BigUint::ZERO {
                 spawn_scrolling_text(
                     &mut commands,
-                    format!("+${}", score_diff),
+                    format!("+${}", format_scientific(&score_diff)),
                     ring_transform.translation + (socket_transform.translation.xy()).extend(100.),
                     1.,
                     100.,
@@ -574,7 +574,7 @@ fn on_cycle_complete(
     if cycle_score > BigUint::ZERO {
         spawn_scrolling_text(
             &mut commands,
-            format!("+${}", cycle_score),
+            format!("+${}", format_scientific(&cycle_score)),
             (ring_transform.translation.xy()).extend(100.) + Vec3::Y * 50.,
             2.,
             200.,
@@ -767,4 +767,31 @@ fn despawn_after_system(
             commands.entity(entity).despawn_recursive();
         }
     }
+}
+
+pub fn format_scientific(num: &BigUint) -> String {
+    let digits = num.to_str_radix(10);
+    let len = digits.len();
+
+    if len <= 4 {
+        return digits;
+    }
+
+    let mut digits = digits;
+    // Remove trailing zeroes
+    digits = digits.trim_end_matches('0').to_string();
+    let len_adjusted = digits.len();
+
+    if len_adjusted <= 4 {
+        return digits;
+    }
+
+    digits.insert(1, '.');
+    let digits_with_precision = if digits.len() > 5 {
+        digits[..5].to_string()
+    } else {
+        digits
+    };
+
+    format!("{}e{}", digits_with_precision, len_adjusted - 1)
 }

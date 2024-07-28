@@ -122,7 +122,7 @@ fn spawn_level(
     time: Res<Time>,
 ) {
     if cfg!(feature = "dev") {
-        let large_number_str = "5000";
+        let large_number_str = "500000";
         let large_number = BigUint::parse_bytes(large_number_str.as_bytes(), 10)
             .expect("Failed to parse big number");
         currency.amount = large_number;

@@ -3,7 +3,7 @@ use num_bigint::BigUint;
 
 use crate::{
     game::spawn::level::Ring,
-    screen::{playing::Currency, Screen},
+    screen::{playing::{format_scientific, Currency}, Screen},
 };
 
 use super::widgets::{CurrencyText, CyclesCountText, PendingCurrencyText};
@@ -31,7 +31,7 @@ fn update_cycles(
         .fold(BigUint::ZERO, |acc, ring| acc + &ring.cycle_count);
 
     if total_cycles != *old_count {
-        cycle_count_text.sections[0].value = format!("{}", total_cycles)
+        cycle_count_text.sections[0].value = format!("{}", format_scientific(&total_cycles))
     }
 }
 
@@ -51,11 +51,11 @@ fn update_currency(
     
     currency_text.sections[0].value = format!(
         "${} ",
-        currency.amount,
+        format_scientific(&currency.amount),
     );
 
     pending_currency_text.sections[0].value = format!(
         " ${}",
-        total_pending_amount
+        format_scientific(&total_pending_amount),
     );
 }

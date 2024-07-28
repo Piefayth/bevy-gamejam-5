@@ -16,10 +16,10 @@ use bevy::{
 use bevy_mod_picking::{events::{Click, Pointer}, picking_core::Pickable, prelude::On};
 use num_bigint::BigUint;
 
-use crate::game::{
+use crate::{game::{
     materials::materials::{SocketMaterial, SocketUiMaterial},
     spawn::level::SocketColor,
-};
+}, screen::playing::format_scientific};
 
 use super::{interaction::InteractionPalette, palette::*, shop::UpgradeButtonsContainer};
 
@@ -157,7 +157,7 @@ impl<T: Spawn> Widgets for T {
                         .spawn((
                             Name::new("Button Price Text"),
                             TextBundle::from_section(
-                                format!("${}", price),
+                                format!("${}", format_scientific(&price)),
                                 TextStyle {
                                     font_size: 14.0,
                                     color: ORANGE.into(),
