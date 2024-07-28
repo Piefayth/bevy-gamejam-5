@@ -108,7 +108,7 @@ fn enter_title(
     commands.spawn((
         Background,
         MaterialMesh2dBundle {
-            mesh: Mesh2dHandle(meshes.add(Rectangle::new(100000.0, 100000.0))),
+            mesh: Mesh2dHandle(meshes.add(Rectangle::new(1000000.0, 1000000.0))),
             material: materials.add(BackgroundMaterial {
                 base_color: GRAY_600.into(),
                 blend_color: GRAY_700.into(),

@@ -198,7 +198,7 @@ jobs:
         run: Compress-Archive -Path '${{ env.PACKAGE_NAME }}' -DestinationPath '${{ env.PACKAGE }}${{ matrix.package_ext }}'
 
       - name: Upload package to artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           path: tmp/package/${{ env.PACKAGE }}${{ matrix.package_ext }}
           name: package-${{ matrix.platform }}
@@ -237,7 +237,7 @@ jobs:
     if: ${{ needs.get-itch-target.outputs.itch-target != '' }}
     steps:
       - name: Download all packages
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           pattern: package-*
           path: tmp

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{
     color::palettes::{
         css::BLACK,
@@ -10,17 +12,16 @@ use bevy_mod_picking::{
     events::{Click, Pointer},
     prelude::On,
 };
+use bevy_tweening::{lens::{TransformPositionLens, TransformScaleLens}, Animator, EaseFunction, Tween};
 use num_bigint::BigUint;
 
 use crate::{
     game::{
-        assets::{FontKey, HandleMap},
-        materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial},
-        spawn::level::{
+        assets::{FontKey, HandleMap}, camera::{CAMERA_DISABLE_TWEEN_NUMBER}, materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial}, spawn::level::{
             map_socket_color, map_socket_color_hotkey, map_socket_highlight_color, socket_position,
             spawn_ring, spawn_socket, GameplayMeshes, Ring, RingIndex, Socket, SocketColor,
             RING_RADIUS, RING_THICKNESS,
-        },
+        }
     },
     screen::{playing::Currency, Screen},
     ui::widgets::Widgets,
@@ -314,6 +315,7 @@ fn on_purchase(
     mut ring_materials: ResMut<Assets<RingMaterial>>,
     mut socket_ui_materials: ResMut<Assets<SocketUiMaterial>>,
     mut unlocks: ResMut<Unlocks>,
+    q_camera: Query<(Entity, &Transform), (With<Camera>, Without<Socket>)>,
     q_upgrade_button_container: Query<Entity, With<UpgradeButtonsContainer>>,
     gameplay_meshes: Res<GameplayMeshes>,
     font_handles: ResMut<HandleMap<FontKey>>,
@@ -405,6 +407,21 @@ fn on_purchase(
         UpgradeKind::AddRing(_) => {
             let existing_ring_count = q_rings.iter().count();
             let any_existing_ring = q_rings.iter().next().unwrap();
+
+            let (camera_entity, camera_transform)= q_camera.single();
+
+            if existing_ring_count == 1 {
+                let tween = Tween::new(
+                    EaseFunction::QuadraticIn,
+                    Duration::from_secs(2),
+                    TransformScaleLens {
+                        start: camera_transform.scale,
+                        end: camera_transform.scale * 2.,
+                    },
+                ).with_completed_event(CAMERA_DISABLE_TWEEN_NUMBER);
+                
+                commands.entity(camera_entity).insert(Animator::new(tween));
+            }
 
             spawn_ring(
                 &mut commands,

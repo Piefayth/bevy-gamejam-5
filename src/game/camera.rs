@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use bevy::input::{keyboard::KeyCode, mouse::{MouseButton, MouseWheel, MouseMotion}, ButtonInput};
 use bevy::window::{CursorGrabMode, PrimaryWindow};
 use bevy_mod_picking::*;
+use bevy_tweening::TweenCompleted;
 use events::{Drag, DragEnd, DragStart, Pointer};
 use pointer::PointerButton;
 use prelude::ListenerInput;
@@ -27,6 +28,8 @@ impl Plugin for CameraControlPlugin {
                 ).chain()
             ).run_if(in_state(Screen::Playing))
         );
+
+        app.observe(on_disable_disable_zoom);
     }
 }
 
@@ -94,10 +97,29 @@ fn camera_drag_end(
     }
 }
 
+#[derive(Component)]
+pub struct DisableZoom;
+
+pub const CAMERA_DISABLE_TWEEN_NUMBER: u64 = 999u64;
+
+fn on_disable_disable_zoom(
+    trigger: Trigger<TweenCompleted>,
+    mut commands: Commands,
+    q_disabled: Query<Entity, With<DisableZoom>>
+) {
+    if trigger.event().user_data != CAMERA_DISABLE_TWEEN_NUMBER {
+        return
+    }
+
+    for cam in &q_disabled {
+        commands.entity(cam).remove::<DisableZoom>();
+    }
+}
+
 // System to handle keyboard input for zooming
 fn zoom_keyboard_input(
     keys: Res<ButtonInput<KeyCode>>,
-    mut query: Query<&mut Transform, With<Camera>>,
+    mut query: Query<&mut Transform, (With<Camera>, Without<DisableZoom>)>,
     upgrade_history: Res<UpgradeHistory>,
 ) {
     if !upgrade_history.history.contains(&UpgradeKind::AddRing(AddRingUpgrade {level: 1u32})) {
@@ -121,7 +143,7 @@ fn zoom_keyboard_input(
 
 fn zoom_mouse_scroll(
     mut mouse_wheel_events: EventReader<MouseWheel>,
-    mut query: Query<&mut Transform, With<Camera>>,
+    mut query: Query<&mut Transform, (With<Camera>, Without<DisableZoom>)>,
     upgrade_history: Res<UpgradeHistory>,
 ) {
     if !upgrade_history.history.contains(&UpgradeKind::AddRing(AddRingUpgrade {level: 1u32})) {
@@ -129,7 +151,12 @@ fn zoom_mouse_scroll(
     }
 
     let mut zoom = 1.0;
+
+    #[cfg(not(target_family = "wasm"))]
     const SCROLL_ZOOM_SPEED: f32 = 0.1;
+
+    #[cfg(target_family = "wasm")]
+    const SCROLL_ZOOM_SPEED: f32 = 0.0005;
 
     for event in mouse_wheel_events.read() {
         zoom -= event.y * SCROLL_ZOOM_SPEED;

@@ -9,10 +9,7 @@ use bevy::{
             BLUE_400, BLUE_600, GRAY_900, GRAY_950, GREEN_400, GREEN_600, ORANGE_400, ORANGE_600,
             PINK_400, PINK_600, RED_400, RED_600,
         },
-    },
-    math::VectorSpace,
-    prelude::*,
-    sprite::{MaterialMesh2dBundle, Mesh2dHandle}, utils::{hashbrown::HashMap},
+    }, ecs::system::EntityCommands, math::VectorSpace, prelude::*, sprite::{MaterialMesh2dBundle, Mesh2dHandle}, utils::hashbrown::HashMap
 };
 use bevy_mod_picking::{
     events::{Click, Pointer},
@@ -225,6 +222,7 @@ pub fn spawn_ring(
         index,
         ..default()
     });
+    
 }
 
 pub fn get_grid_coordinates(index: usize) -> IVec2 {
