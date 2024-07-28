@@ -3,18 +3,19 @@
 use std::{f32::consts::PI, time::Duration};
 
 use bevy::{
-    color::palettes::{
+    audio::PlaybackMode, color::palettes::{
         css::{BLACK, BLUE, LIGHT_GREEN, ORANGE, PINK, RED, WHITE, YELLOW},
         tailwind::CYAN_400,
     }, math::VectorSpace, prelude::*, sprite::MaterialMesh2dBundle
 };
 use bevy_tweening::{lens::TransformPositionLens, Animator, EaseFunction, Tween};
 use num_bigint::BigUint;
+use rand::Rng;
 
 use super::Screen;
 use crate::{
     game::{
-        assets::{FontKey, HandleMap, SoundtrackKey},
+        assets::{FontKey, HandleMap, SfxKey, SoundtrackKey},
         audio::soundtrack::PlaySoundtrack,
         materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial},
         spawn::level::{
@@ -534,6 +535,7 @@ fn on_cycle_complete(
     mut q_ring: Query<(&mut Ring, &Transform)>,
     mut currency: ResMut<Currency>,
     font_handles: ResMut<HandleMap<FontKey>>,
+    sfx_handles: Res<HandleMap<SfxKey>>,
     time: Res<Time>,
 ) {
     let (mut ring, ring_transform) = q_ring

@@ -1,10 +1,11 @@
-use bevy::{audio::PlaybackMode, prelude::*};
+use bevy::{audio::{PlaybackMode, Volume}, prelude::*};
 
-use crate::game::assets::{HandleMap, SoundtrackKey};
+use crate::{game::assets::{HandleMap, SfxKey, SoundtrackKey}, ui::scoreboard::AudioSettings};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<IsSoundtrack>();
     app.observe(play_soundtrack);
+    app.observe(on_sfx);
 }
 
 fn play_soundtrack(
@@ -46,3 +47,29 @@ pub enum PlaySoundtrack {
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 struct IsSoundtrack;
+
+
+#[derive(Event)]
+pub struct PlaySfx {
+    pub key: SfxKey,
+    pub volume: f32,
+}
+
+fn on_sfx(
+    trigger: Trigger<PlaySfx>,
+    mut commands: Commands,
+    sfx_handles: Res<HandleMap<SfxKey>>,
+    audio_settings: Res<AudioSettings>,
+) {
+    if audio_settings.enabled {
+        commands.spawn(AudioSourceBundle {
+            source: sfx_handles[&trigger.event().key].clone_weak(),
+            settings: PlaybackSettings {
+                mode: PlaybackMode::Despawn,
+                volume: Volume::new(trigger.event().volume),
+                ..default()
+            },
+        });
+    }
+
+}

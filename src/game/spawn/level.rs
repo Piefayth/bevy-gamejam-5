@@ -3,13 +3,19 @@
 use std::f32::consts::PI;
 
 use bevy::{
+    audio::{PlaybackMode, Volume},
     color::palettes::{
         css::{BLACK, BLUE, RED, WHITE},
         tailwind::{
             BLUE_400, BLUE_600, GRAY_900, GRAY_950, GREEN_400, GREEN_600, ORANGE_400, ORANGE_600,
             PINK_400, PINK_600, RED_400, RED_600,
         },
-    }, ecs::system::EntityCommands, math::VectorSpace, prelude::*, sprite::{MaterialMesh2dBundle, Mesh2dHandle}, utils::hashbrown::HashMap
+    },
+    ecs::system::EntityCommands,
+    math::VectorSpace,
+    prelude::*,
+    sprite::{MaterialMesh2dBundle, Mesh2dHandle},
+    utils::hashbrown::HashMap,
 };
 use bevy_mod_picking::{
     events::{Click, Pointer},
@@ -20,7 +26,11 @@ use bevy_mod_picking::{
 use num_bigint::BigUint;
 
 use crate::{
-    game::materials::materials::{RingMaterial, SocketMaterial},
+    game::{
+        assets::{HandleMap, SfxKey},
+        audio::soundtrack::PlaySfx,
+        materials::materials::{RingMaterial, SocketMaterial},
+    },
     screen::playing::{Currency, CycleBonus},
     ui::widgets::Hotbar,
 };
@@ -108,7 +118,7 @@ pub struct Socket {
 
 #[derive(Resource, Default)]
 pub struct RingIndex {
-    pub rings: HashMap<IVec2, Entity>
+    pub rings: HashMap<IVec2, Entity>,
 }
 
 fn spawn_level(
@@ -167,15 +177,19 @@ pub fn spawn_ring(
         ))
         .id();
 
-    commands.entity(ring_entity).insert(
-        MaterialMesh2dBundle {
-            mesh: ring_mesh,
-            material: ring_material,
-            //transform: Transform::from_xyz(index as f32 * 512., 0., 0.),
-            transform: Transform::from_translation(get_ring_position_and_update_index(index, 512., 100., ring_entity, &mut ring_index)),
-            ..default()
-        },
-    );
+    commands.entity(ring_entity).insert(MaterialMesh2dBundle {
+        mesh: ring_mesh,
+        material: ring_material,
+        //transform: Transform::from_xyz(index as f32 * 512., 0., 0.),
+        transform: Transform::from_translation(get_ring_position_and_update_index(
+            index,
+            512.,
+            100.,
+            ring_entity,
+            &mut ring_index,
+        )),
+        ..default()
+    });
 
     let mut starting_sockets: Vec<Entity> = vec![];
 
@@ -223,7 +237,6 @@ pub fn spawn_ring(
         index,
         ..default()
     });
-    
 }
 
 pub fn get_grid_coordinates(index: usize) -> IVec2 {
@@ -279,7 +292,13 @@ fn get_real_position(coords: IVec2, cell_size: f32, spacing: f32) -> Vec3 {
     Vec3::new(position_x, position_y, 0.0)
 }
 
-fn get_ring_position_and_update_index(index: usize, cell_size: f32, spacing: f32, ring: Entity, ring_index: &mut RingIndex) -> Vec3 {
+fn get_ring_position_and_update_index(
+    index: usize,
+    cell_size: f32,
+    spacing: f32,
+    ring: Entity,
+    ring_index: &mut RingIndex,
+) -> Vec3 {
     let coords = get_grid_coordinates(index);
     ring_index.rings.insert(coords, ring);
     get_real_position(coords, cell_size, spacing)
@@ -393,6 +412,7 @@ struct UpdateSocketColor {
 
 fn on_set_socket_color(
     trigger: Trigger<UpdateSocketColor>,
+    mut commands: Commands,
     mut q_sockets: Query<(&mut Socket, &Handle<SocketMaterial>)>,
     mut materials: ResMut<Assets<SocketMaterial>>,
     q_hotbar: Query<&Hotbar>,
@@ -402,6 +422,7 @@ fn on_set_socket_color(
     let selected_color = hotbar.color_mappings[hotbar.selected_index as usize];
 
     let (mut socket, socket_material_handle) = q_sockets.get_mut(trigger.event().socket).unwrap();
+
     let material = materials.get_mut(socket_material_handle).unwrap();
 
     let new_color = if trigger.event().remove {
@@ -409,6 +430,10 @@ fn on_set_socket_color(
     } else {
         selected_color
     };
+
+    if socket.color == new_color {
+        return;
+    }
 
     let new_trigger_duration = map_socket_color_trigger_duration(selected_color);
 
@@ -439,6 +464,18 @@ fn on_set_socket_color(
 
     material.data[1] = new_trigger_duration;
     socket.trigger_duration_seconds = new_trigger_duration;
+
+    if socket.color == SocketColor::NONE {
+        commands.trigger(PlaySfx {
+            key: SfxKey::Neg,
+            volume: 2.,
+        });
+    } else {
+        commands.trigger(PlaySfx {
+            key: SfxKey::Affirm,
+            volume: 2.,
+        });
+    }
 
     socket.color = new_color;
 }

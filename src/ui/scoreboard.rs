@@ -2,16 +2,39 @@ use bevy::prelude::*;
 use num_bigint::BigUint;
 
 use crate::{
-    game::spawn::level::Ring,
+    game::{assets::SoundtrackKey, audio::soundtrack::PlaySoundtrack, spawn::level::Ring},
     screen::{playing::{format_scientific, Currency}, Screen},
 };
 
-use super::widgets::{CurrencyText, CyclesCountText, PendingCurrencyText};
+use super::widgets::{CurrencyText, CyclesCountText, PendingCurrencyText, ToggleAudio};
 
 pub(super) fn plugin(app: &mut App) {
     app.add_systems(
         Update,
         (update_cycles, update_currency).run_if(in_state(Screen::Playing)),
+    );
+
+    app.insert_resource::<AudioSettings>(AudioSettings { enabled: true });
+    app.observe(toggle_audio);
+}
+
+#[derive(Resource, Default)]
+pub struct AudioSettings {
+    pub enabled: bool,
+}
+
+fn toggle_audio(
+    _trigger: Trigger<ToggleAudio>,
+    mut commands: Commands,
+    mut audio_settings: ResMut<AudioSettings>
+) {
+    audio_settings.enabled = !audio_settings.enabled;
+
+    commands.trigger(
+        match audio_settings.enabled {
+            true => PlaySoundtrack::Key(SoundtrackKey::Gameplay),
+            false => PlaySoundtrack::Disable
+        }
     );
 }
 

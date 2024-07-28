@@ -39,6 +39,7 @@ pub trait Widgets {
     fn vertical_container(&mut self, justify_content: JustifyContent, gap: Val) -> EntityCommands;
 
     fn upgrade_shop(&mut self, font: Handle<Font>) -> EntityCommands;
+    fn audio_button(&mut self, font: Handle<Font>) -> EntityCommands;
     fn shop_button(
         &mut self,
         price: &BigUint,
@@ -78,6 +79,9 @@ pub trait Widgets {
     fn socket(&mut self, socket_material: Handle<SocketUiMaterial>) -> EntityCommands;
 }
 
+#[derive(Event)]
+pub struct ToggleAudio;
+
 impl<T: Spawn> Widgets for T {
     fn button(&mut self, text: impl Into<String>, font: Handle<Font>) -> EntityCommands {
         let mut entity = self.spawn((
@@ -108,6 +112,49 @@ impl<T: Spawn> Widgets for T {
                     text,
                     TextStyle {
                         font_size: 26.0,
+                        font: font,
+                        color: BUTTON_TEXT,
+                        ..default()
+                    },
+                ),
+            ));
+        });
+        entity
+    }
+
+    fn audio_button(&mut self, font: Handle<Font>) -> EntityCommands {
+        let mut entity = self.spawn((
+            Name::new("Button"),
+            ButtonBundle {
+                style: Style {
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    align_self: AlignSelf::End,
+                    border: UiRect::all(Px(1.)),
+                    margin: UiRect::all(Px(4.)),
+                    padding: UiRect::all(Px(4.)),
+                    ..default()
+                },
+                background_color: GRAY_700.into(),
+                border_color: GRAY_400.into(),
+                ..default()
+            },
+            InteractionPalette {
+                none: GRAY_700.into(),
+                hovered: GRAY_600.into(),
+                pressed: GRAY_500.into(),
+            },
+            On::<Pointer<Click>>::commands_mut(move |_, c| {
+                c.trigger(ToggleAudio)
+            })
+        ));
+        entity.with_children(|children| {
+            children.spawn((
+                Name::new("Button Text"),
+                TextBundle::from_section(
+                    "Toggle Sound",
+                    TextStyle {
+                        font_size: 14.0,
                         font: font,
                         color: BUTTON_TEXT,
                         ..default()
@@ -495,6 +542,7 @@ impl<T: Spawn> Widgets for T {
             score_display
                 .vertical_container(JustifyContent::Start, Px(0.))
                 .with_children(|score_display_container| {
+                    score_display_container.audio_button(font.clone());
                     score_display_container
                         .scoreboard_cycles_text(font.clone());
                     score_display_container

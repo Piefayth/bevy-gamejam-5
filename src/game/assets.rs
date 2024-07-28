@@ -38,12 +38,9 @@ impl FromWorld for HandleMap<ImageKey> {
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Reflect)]
 pub enum SfxKey {
-    ButtonHover,
-    ButtonPress,
-    Step1,
-    Step2,
-    Step3,
-    Step4,
+    Unlock,
+    Affirm,
+    Neg
 }
 
 impl AssetKey for SfxKey {
@@ -54,18 +51,9 @@ impl FromWorld for HandleMap<SfxKey> {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.resource::<AssetServer>();
         [
-            (
-                SfxKey::ButtonHover,
-                asset_server.load("audio/sfx/button_hover.ogg"),
-            ),
-            (
-                SfxKey::ButtonPress,
-                asset_server.load("audio/sfx/button_press.ogg"),
-            ),
-            (SfxKey::Step1, asset_server.load("audio/sfx/step1.ogg")),
-            (SfxKey::Step2, asset_server.load("audio/sfx/step2.ogg")),
-            (SfxKey::Step3, asset_server.load("audio/sfx/step3.ogg")),
-            (SfxKey::Step4, asset_server.load("audio/sfx/step4.ogg")),
+            (SfxKey::Unlock, asset_server.load("audio/sfx/unlock.wav")),
+            (SfxKey::Affirm, asset_server.load("audio/sfx/muted-guitar-affirm.wav")),
+            (SfxKey::Neg, asset_server.load("audio/sfx/muted-guitar-neg.wav")),
         ]
         .into()
     }
@@ -86,12 +74,8 @@ impl FromWorld for HandleMap<SoundtrackKey> {
         let asset_server = world.resource::<AssetServer>();
         [
             (
-                SoundtrackKey::Credits,
-                asset_server.load("audio/soundtracks/Monkeys Spinning Monkeys.ogg"),
-            ),
-            (
                 SoundtrackKey::Gameplay,
-                asset_server.load("audio/soundtracks/Fluffing A Duck.ogg"),
+                asset_server.load("audio/soundtracks/soundtrack.wav"),
             ),
         ]
         .into()

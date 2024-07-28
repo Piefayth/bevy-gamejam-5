@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use bevy::{
-    color::palettes::{
+    audio::PlaybackMode, color::palettes::{
         css::BLACK,
         tailwind::{GRAY_400, GRAY_500, GRAY_600, GRAY_700, GRAY_800, GRAY_900},
     }, math::VectorSpace, prelude::*, utils::HashSet
@@ -15,7 +15,7 @@ use num_bigint::BigUint;
 
 use crate::{
     game::{
-        assets::{FontKey, HandleMap}, camera::{CAMERA_DISABLE_TWEEN_NUMBER}, materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial}, spawn::level::{
+        assets::{FontKey, HandleMap, SfxKey}, audio::soundtrack::PlaySfx, camera::CAMERA_DISABLE_TWEEN_NUMBER, materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial}, spawn::level::{
             map_socket_color, map_socket_color_hotkey, map_socket_highlight_color, socket_position,
             spawn_ring, spawn_socket, GameplayMeshes, Ring, RingIndex, Socket, SocketColor,
             RING_RADIUS, RING_THICKNESS,
@@ -309,8 +309,10 @@ fn on_purchase(
     mut q_hotbar: Query<(Entity, &mut Hotbar)>,
     mut commands: Commands,
     mut currency: ResMut<Currency>,
-    mut socket_materials: ResMut<Assets<SocketMaterial>>,
-    mut ring_materials: ResMut<Assets<RingMaterial>>,
+    mut materials: (
+        ResMut<Assets<SocketMaterial>>,
+        ResMut<Assets<RingMaterial>>
+    ),
     mut socket_ui_materials: ResMut<Assets<SocketUiMaterial>>,
     mut unlocks: ResMut<Unlocks>,
     q_camera: Query<(Entity, &Transform), (With<Camera>, Without<Socket>)>,
@@ -318,8 +320,10 @@ fn on_purchase(
     gameplay_meshes: Res<GameplayMeshes>,
     font_handles: ResMut<HandleMap<FontKey>>,
     time: Res<Time>,
+    sfx_handles: Res<HandleMap<SfxKey>>,
 ) {
     let purchase = trigger.event();
+    let (mut socket_materials, mut ring_materials) = materials;
 
     // 1. grant what was purchased
 
@@ -340,6 +344,11 @@ fn on_purchase(
             .entity(purchase.upgrade_button_entity)
             .despawn_recursive();
     }
+
+    commands.trigger(PlaySfx {
+        key: SfxKey::Unlock,
+        volume: 2.
+    });
 
     match &purchase.upgrade.upgrade_kind {
         UpgradeKind::None => {}
