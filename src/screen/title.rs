@@ -193,11 +193,12 @@ fn enter_title(
 
 fn cycle_title_ring(
     mut commands: Commands,
-    q_socket: Query<(Entity, &Socket, &Transform)>,
+    q_socket: Query<(Entity, &Socket, &Transform, &Handle<SocketMaterial>)>,
     mut q_ring: Query<(Entity, &mut Ring, &Handle<RingMaterial>)>,
     time: Res<Time>,
     mut old_progress_pcts: Local<Vec<f32>>,
     mut ring_materials: ResMut<Assets<RingMaterial>>,
+    mut socket_materials: ResMut<Assets<SocketMaterial>>,
 ) {
     for (ring_entity, mut ring, ring_mat_handle) in q_ring.iter_mut() {
         let seconds_since_cycle_start = time.elapsed_seconds() - ring.cycle_start_seconds;
@@ -215,6 +216,34 @@ fn cycle_title_ring(
 
         ring_mat.data[2] = progress_pct;
         
+        for socket_entity in &ring.sockets {
+            let (socket_entity, socket, _t, socket_material_handle) = q_socket
+                .get(*socket_entity)
+                .expect("Ring's socket Vec contained Entity that was not Socket!");
+
+            if old_progress_pcts.len() < ring.index + 1 {
+                old_progress_pcts.push(0.)
+            }
+
+            let old_progress_pct = old_progress_pcts[ring.index];
+
+            let socket_position_pct =
+                (ring.sockets.len() as f32 - socket.index as f32) / ring.sockets.len() as f32;
+
+            let zeroth_socket_triggered =
+                socket_position_pct == 1. && old_progress_pct > progress_pct;
+            let other_socket_triggered = socket_position_pct != 1.
+                && old_progress_pct <= socket_position_pct
+                && socket_position_pct <= progress_pct;
+
+            if zeroth_socket_triggered || other_socket_triggered {
+                let mat = socket_materials.get_mut(socket_material_handle).unwrap();
+                mat.data[2] = time.elapsed_seconds();
+
+            }
+        }
+
+        old_progress_pcts[ring.index] = progress_pct;
     }
 }
 
