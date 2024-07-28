@@ -40,7 +40,16 @@ impl FromWorld for HandleMap<ImageKey> {
 pub enum SfxKey {
     Unlock,
     Affirm,
-    Neg
+    Neg,
+    Click,
+    Click2,
+    Click3,
+    CycleC,
+    CycleD,
+    CycleLowF,
+    CycleLowG,
+    CycleHighF,
+    CycleHighG,
 }
 
 impl AssetKey for SfxKey {
@@ -51,9 +60,18 @@ impl FromWorld for HandleMap<SfxKey> {
     fn from_world(world: &mut World) -> Self {
         let asset_server = world.resource::<AssetServer>();
         [
-            (SfxKey::Unlock, asset_server.load("audio/sfx/unlock.wav")),
-            (SfxKey::Affirm, asset_server.load("audio/sfx/muted-guitar-affirm.wav")),
-            (SfxKey::Neg, asset_server.load("audio/sfx/muted-guitar-neg.wav")),
+            (SfxKey::Unlock, asset_server.load("audio/sfx/unlock.ogg")),
+            (SfxKey::Affirm, asset_server.load("audio/sfx/muted-guitar-affirm.ogg")),
+            (SfxKey::Neg, asset_server.load("audio/sfx/muted-guitar-neg.ogg")),
+            (SfxKey::Click, asset_server.load("audio/sfx/click.ogg")),
+            (SfxKey::Click2, asset_server.load("audio/sfx/click2.ogg")),
+            (SfxKey::Click3, asset_server.load("audio/sfx/click3.ogg")),
+            (SfxKey::CycleC, asset_server.load("audio/sfx/cycle-c.ogg")),
+            (SfxKey::CycleD, asset_server.load("audio/sfx/cycle-d.ogg")),
+            (SfxKey::CycleLowF, asset_server.load("audio/sfx/cycle-low-f.ogg")),
+            (SfxKey::CycleLowG, asset_server.load("audio/sfx/cycle-low-g.ogg")),
+            (SfxKey::CycleHighF, asset_server.load("audio/sfx/cycle-high-f.ogg")),
+            (SfxKey::CycleHighG, asset_server.load("audio/sfx/cycle-high-g.ogg")),
         ]
         .into()
     }
@@ -75,7 +93,7 @@ impl FromWorld for HandleMap<SoundtrackKey> {
         [
             (
                 SoundtrackKey::Gameplay,
-                asset_server.load("audio/soundtracks/soundtrack.wav"),
+                asset_server.load("audio/soundtracks/soundtrack.ogg"),
             ),
         ]
         .into()

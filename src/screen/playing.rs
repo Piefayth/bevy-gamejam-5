@@ -16,7 +16,7 @@ use super::Screen;
 use crate::{
     game::{
         assets::{FontKey, HandleMap, SfxKey, SoundtrackKey},
-        audio::soundtrack::PlaySoundtrack,
+        audio::soundtrack::{PlaySfx, PlaySoundtrack},
         materials::materials::{RingMaterial, SocketMaterial, SocketUiMaterial},
         spawn::level::{
             get_grid_coordinates, map_socket_color, map_socket_color_hotkey,
@@ -316,6 +316,8 @@ fn on_socket_triggered(
     currency: Res<Currency>,
     time: Res<Time>,
 ) {
+    let ring_count = q_ring.iter().count();
+
     let (ring_entity, mut ring, ring_transform) = q_ring
         .get_mut(trigger.event().ring)
         .expect("SocketTriggered.ring should've referenced an Entity with a Ring component.");
@@ -335,6 +337,20 @@ fn on_socket_triggered(
                 < time.elapsed_seconds());
 
         if triggered_successfully {
+
+            if ring_count == 1 { // no clicks when there are multiple rings
+                let keys = [
+                    SfxKey::Click,
+                    SfxKey::Click2,
+                ];
+                let random_index = rand::thread_rng().gen_range(0..keys.len());
+                
+                commands.trigger(PlaySfx {
+                    key: keys[random_index],
+                    volume: 0.5,
+                });
+            }
+
             let old_score = ring.cycle_score.clone();
             let old_multiplier = ring.cycle_multiplier.clone();
 
@@ -535,7 +551,6 @@ fn on_cycle_complete(
     mut q_ring: Query<(&mut Ring, &Transform)>,
     mut currency: ResMut<Currency>,
     font_handles: ResMut<HandleMap<FontKey>>,
-    sfx_handles: Res<HandleMap<SfxKey>>,
     time: Res<Time>,
 ) {
     let (mut ring, ring_transform) = q_ring
@@ -575,6 +590,28 @@ fn on_cycle_complete(
 
     // display the change in $ if it was positive
     if cycle_score > BigUint::ZERO {
+        // for the outer rings dont bother playing the cycle finish noises
+        // we should probably make this "only rings in view" but uh
+        // nah
+        if ring.index < 9 { 
+            let keys = [
+                SfxKey::CycleC,
+                SfxKey::CycleD,
+                SfxKey::CycleHighF,
+                SfxKey::CycleHighG,
+                SfxKey::CycleLowF,
+                SfxKey::CycleLowG,
+            ];
+    
+            let random_index = rand::thread_rng().gen_range(0..keys.len());
+            
+            commands.trigger(PlaySfx {
+                key: keys[random_index],
+                volume: 1.
+            });
+        }
+
+
         spawn_scrolling_text(
             &mut commands,
             format!("+${}", format_scientific(&cycle_score)),
