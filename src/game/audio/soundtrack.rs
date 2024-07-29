@@ -22,6 +22,7 @@ fn play_soundtrack(
         PlaySoundtrack::Key(key) => *key,
         PlaySoundtrack::Disable => return,
     };
+    
     commands.spawn((
         AudioSourceBundle {
             source: soundtrack_handles[&soundtrack_key].clone_weak(),

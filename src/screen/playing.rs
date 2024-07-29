@@ -264,6 +264,7 @@ fn ring_cycle_display_panel_position(
 pub struct SocketTriggered {
     socket: usize,
     ring: Entity,
+    bonus_factor: f32,
 }
 
 #[derive(Event)]
@@ -317,6 +318,15 @@ fn on_socket_triggered(
     time: Res<Time>,
 ) {
     let ring_count = q_ring.iter().count();
+    let all_ring_previous_socket_count = q_ring.iter().fold(0, |acc, (_, ring, _)| { acc + ring.previous_cycle.len()});
+
+    /*
+
+        
+    let bonus_score = bonuses
+        .iter()
+        .fold(BigUint::ZERO, |acc, bonus| acc + score_bonus(bonus));
+     */
 
     let (ring_entity, mut ring, ring_transform) = q_ring
         .get_mut(trigger.event().ring)
@@ -337,6 +347,7 @@ fn on_socket_triggered(
                 < time.elapsed_seconds());
 
         if triggered_successfully {
+            let bonus_factor = trigger.event().bonus_factor;
 
             if ring_count == 1 { // no clicks when there are multiple rings
                 let keys = [
@@ -361,26 +372,33 @@ fn on_socket_triggered(
                     if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
                         EnhanceColorUpgrade {
                             color: SocketColor::BLUE,
-                            tier: 1,
+                            tier: 3,
                         },
                     )) {
-                        ring.cycle_score += BigUint::from(blue_orb_count.0);
+                        ring.cycle_score += multiply_biguint_with_float(&BigUint::from(blue_orb_count.0 * 6), bonus_factor);
+                    } else if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
+                        EnhanceColorUpgrade {
+                            color: SocketColor::BLUE,
+                            tier: 2,
+                        },
+                    )){
+                        ring.cycle_score += multiply_biguint_with_float(&BigUint::from(blue_orb_count.0 * 4), bonus_factor);
+                    } else if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
+                        EnhanceColorUpgrade {
+                            color: SocketColor::BLUE,
+                            tier: 1,
+                        },
+                    )){
+                        ring.cycle_score += multiply_biguint_with_float(&BigUint::from(blue_orb_count.0 * 2), bonus_factor);
                     } else {
-                        ring.cycle_score += BigUint::from(1u32);
+                        ring.cycle_score += multiply_biguint_with_float(&BigUint::from(1u32), bonus_factor);
                     }
                 }
                 SocketColor::RED => {
                     let num_sockets = ring.sockets.len();
                     let prev_index = (socket.index + num_sockets - 1) % num_sockets;
                     let next_index = (socket.index + 1) % num_sockets;
-                    commands.trigger(SocketTriggered {
-                        socket: prev_index,
-                        ring: ring_entity,
-                    });
-                    commands.trigger(SocketTriggered {
-                        socket: next_index,
-                        ring: ring_entity,
-                    });
+
 
                     if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
                         EnhanceColorUpgrade {
@@ -388,66 +406,69 @@ fn on_socket_triggered(
                             tier: 1,
                         },
                     )) {
-                        let ring_grid_coordinates = get_grid_coordinates(ring.index);
-                        let right_neighbor_coordinates = &(ring_grid_coordinates + IVec2::X);
-                        let left_neighbor_coordinates = &(ring_grid_coordinates - IVec2::X);
-
-                        if let Some(neighbor_ring) =
-                            ring_index.rings.get(right_neighbor_coordinates)
-                        {
-                            commands.trigger(SocketTriggered {
-                                ring: *neighbor_ring,
-                                socket: prev_index,
-                            });
-
-                            commands.trigger(SocketTriggered {
-                                ring: *neighbor_ring,
-                                socket: next_index,
-                            });
-                        }
-
-                        if let Some(neighbor_ring) = ring_index.rings.get(left_neighbor_coordinates)
-                        {
-                            commands.trigger(SocketTriggered {
-                                ring: *neighbor_ring,
-                                socket: prev_index,
-                            });
-
-                            commands.trigger(SocketTriggered {
-                                ring: *neighbor_ring,
-                                socket: next_index,
-                            });
-                        }
+                        commands.trigger(SocketTriggered {
+                            socket: prev_index,
+                            ring: ring_entity,
+                            bonus_factor: 2. * bonus_factor,
+                        });
+                        commands.trigger(SocketTriggered {
+                            socket: next_index,
+                            ring: ring_entity,
+                            bonus_factor: 2. * bonus_factor,
+                        });
+                    } else {
+                        commands.trigger(SocketTriggered {
+                            socket: prev_index,
+                            ring: ring_entity,
+                            bonus_factor: 1.
+                        });
+                        commands.trigger(SocketTriggered {
+                            socket: next_index,
+                            ring: ring_entity,
+                            bonus_factor: 1.
+                        });
                     }
                 }
                 SocketColor::GREEN => {
-                    let score_gained = ring.previous_cycle.len();
-                    ring.cycle_score += score_gained;
-
                     if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
                         EnhanceColorUpgrade {
                             color: SocketColor::GREEN,
                             tier: 1,
                         },
                     )) {
-                        let pending_amount_percentage_reward = 0.1;
-                        ring.cycle_score += multiply_biguint_with_float(
-                            &currency.pending_amount,
-                            pending_amount_percentage_reward,
-                        );
+                        let score_gained = all_ring_previous_socket_count as f32 * bonus_factor;
+                        ring.cycle_score += score_gained as u32;
+                    } else {
+                        let score_gained = ring.previous_cycle.len() as f32 * bonus_factor;
+                        ring.cycle_score += score_gained as u32;
                     }
                 }
                 SocketColor::ORANGE => {
-                    pending_socket_effects.push(SocketEffect::ReduceCooldown(
-                        ReduceCooldownEffect {
-                            ring: ring_entity,
-                            amount: 0.5,
+                    if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(
+                        EnhanceColorUpgrade {
+                            color: SocketColor::ORANGE,
+                            tier: 1,
                         },
-                    ));
+                    )){
+                        pending_socket_effects.push(SocketEffect::ReduceCooldown(
+                            ReduceCooldownEffect {
+                                ring: ring_entity,
+                                amount: 1.0 * bonus_factor,
+                            },
+                        ));
+                    } else {
+                        pending_socket_effects.push(SocketEffect::ReduceCooldown(
+                            ReduceCooldownEffect {
+                                ring: ring_entity,
+                                amount: 0.5 * bonus_factor,
+                            },
+                        ));
+                    }
+
                 }
                 SocketColor::NONE => panic!("Shouldn't get points for an empty socket."),
                 SocketColor::PINK => {
-                    ring.cycle_multiplier += 1.;
+                    ring.cycle_multiplier += 1. * bonus_factor;
                 }
             }
 
@@ -607,7 +628,7 @@ fn on_cycle_complete(
             
             commands.trigger(PlaySfx {
                 key: keys[random_index],
-                volume: 1.
+                volume: 1.5
             });
         }
 
@@ -782,6 +803,7 @@ fn progress_cycle(
                 commands.trigger(SocketTriggered {
                     socket: socket.index,
                     ring: ring_entity,
+                    bonus_factor: 1.,
                 });
             }
         }

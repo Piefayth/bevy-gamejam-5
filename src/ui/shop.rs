@@ -101,16 +101,29 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
         UpgradeKind::None => BigUint::ZERO,
         UpgradeKind::AddSocket(upgrade) => {
             let base_add_socket_cost = BigUint::from(4u32);
-            let scale_factor_per_level = match upgrade.level {
-                _ if upgrade.level <= 10 => 0.15,
-                _ if upgrade.level > 10 => 0.20,
-                _ => 0.15,
-            };
 
-            multiply_biguint_with_float(
-                &base_add_socket_cost,
-                (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32),
-            )
+            if upgrade.level <= 10 {
+                let scale_factor_per_level = 0.115;
+                multiply_biguint_with_float(
+                    &base_add_socket_cost,
+                    (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32),
+                )
+            } else {
+                let scale_factor_per_level = 0.125;
+                let cost_at_scaling_threshold = multiply_biguint_with_float(
+                    &base_add_socket_cost,
+                    (upgrade.level as f32).powf(1. + scale_factor_per_level * 10. as f32),
+                );
+
+                let scaling_factor_after_threshold = 0.07;
+                let cost_after_threshold = multiply_biguint_with_float(
+                    &base_add_socket_cost,
+                    (upgrade.level as f32).powf(1. + scaling_factor_after_threshold * upgrade.level as f32),
+                );
+
+                cost_at_scaling_threshold + cost_after_threshold
+            }
+
         }
         UpgradeKind::AddColor(upgrade) => match upgrade.color {
             SocketColor::NONE => panic!("No such upgrade for baseline Socket Color NONE"),
@@ -121,18 +134,33 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
             SocketColor::PINK => BigUint::from(250u32),
         },
         UpgradeKind::AddRing(upgrade) => {
-            let base_add_ring_cost = BigUint::from(800u32);
-            let scale_factor_per_level = 0.15;
-
-            multiply_biguint_with_float(
-                &base_add_ring_cost,
-                (upgrade.level as f32).powf(1. + scale_factor_per_level * upgrade.level as f32),
-            )
+            match upgrade.level {
+                1 => BigUint::from(1250u32),
+                2 => BigUint::from(200000u32),
+                3 => BigUint::from(2000000u32),
+                4 => BigUint::from(20000000u32),
+                5 => BigUint::from(200000000u32),
+                6 => BigUint::from(2000000000u32),
+                7 => BigUint::from(20000000000u64),
+                8 => BigUint::from(200000000000u64),
+                9 => BigUint::from(2000000000000u64),
+                _ => {
+                    let base: BigUint = BigUint::from(10u32);
+                    let exponent = upgrade.level + 1;
+                    let pow: BigUint = base.pow(exponent);
+                    BigUint::from(20u32) * pow
+                }
+            }
         }
         UpgradeKind::EnhanceColor(upgrade) => match upgrade.color {
             SocketColor::NONE => todo!(),
-            SocketColor::BLUE => BigUint::from(1500u32),
-            SocketColor::RED => BigUint::from(4000u32),
+            SocketColor::BLUE => match upgrade.tier {
+                1 => BigUint::from(1000u32),
+                2 => BigUint::from(25000u32),
+                3 => BigUint::from(50000u32),
+                _ => panic!("oops"),
+            },
+            SocketColor::RED => BigUint::from(3000u32),
             SocketColor::GREEN => BigUint::from(20000u32),
             SocketColor::ORANGE => BigUint::from(100000u32),
             SocketColor::PINK => BigUint::from(1000000u32),
@@ -156,9 +184,8 @@ fn on_new_shop(
     mut unlocks: ResMut<Unlocks>,
     font_handles: ResMut<HandleMap<FontKey>>,
 ) {
-    unlocks.0 = add_socket_unlocks();
+    unlocks.0 = add_ring_and_socket_unlocks();
     unlocks.0.extend(build_color_unlocks());
-    unlocks.0.extend(build_ring_unlocks());
     unlocks.0.extend(build_color_enhance_unlocks());
 
     let parent = trigger.event().parent;
@@ -175,54 +202,82 @@ fn on_new_shop(
     })
 }
 
-fn add_socket_unlocks() -> Vec<Unlock> {
-    (0..20)
-        .collect::<Vec<usize>>()
-        .iter()
-        .map(|elem| {
-            if *elem == 0 {
-                Unlock {
-                    when: vec![],
-                    then: UpgradeKind::AddSocket(AddSocketUpgrade { level: 1 }),
-                }
-            } else {
-                Unlock {
-                    when: vec![UpgradeKind::AddSocket(AddSocketUpgrade {
-                        level: *elem as u32,
-                    })],
-                    then: UpgradeKind::AddSocket(AddSocketUpgrade {
-                        level: *elem as u32 + 1,
-                    }),
-                }
-            }
-        })
-        .collect()
-}
+fn add_ring_and_socket_unlocks() -> Vec<Unlock> {
+    let mut unlocks = Vec::new();
+    let sockets_per_ring = 10;
 
-fn build_ring_unlocks() -> Vec<Unlock> {
-    (0..64)
-        .collect::<Vec<usize>>()
-        .iter()
-        .map(|elem| {
-            if *elem == 0 {
-                Unlock {
-                    when: vec![UpgradeKind::AddColor(AddColorUpgrade {
-                        color: SocketColor::PINK,
-                    })],
-                    then: UpgradeKind::AddRing(AddRingUpgrade { level: 1 }),
+    for ring_level in 0..64 {
+        // Generate 15 socket unlocks for each ring level
+        for socket_level in 1..=sockets_per_ring {
+            let socket_index = ring_level * sockets_per_ring + socket_level; // Calculate global socket level
+
+            let unlock = if socket_index == 1 {
+                if ring_level > 0 {
+                    Unlock {
+                        when: vec![UpgradeKind::AddRing(AddRingUpgrade{ level: ring_level })],
+                        then: UpgradeKind::AddSocket(AddSocketUpgrade { level: 1 }),
+                    }
+                } else {
+                    // First socket unlock has no prerequisites
+                    Unlock {
+                        when: vec![],
+                        then: UpgradeKind::AddSocket(AddSocketUpgrade { level: 1 }),
+                    }
                 }
+
             } else {
-                Unlock {
-                    when: vec![UpgradeKind::AddRing(AddRingUpgrade {
-                        level: *elem as u32,
-                    })],
-                    then: UpgradeKind::AddRing(AddRingUpgrade {
-                        level: *elem as u32 + 1,
-                    }),
+                if ring_level > 0 {
+                    Unlock {
+                        when: vec![UpgradeKind::AddSocket(AddSocketUpgrade {
+                            level: socket_index as u32 - 1,
+                        }), UpgradeKind::AddRing(AddRingUpgrade{ level: ring_level })],
+                        then: UpgradeKind::AddSocket(AddSocketUpgrade {
+                            level: socket_index as u32,
+                        }),
+                    }
+                } else {
+                    Unlock {
+                        when: vec![UpgradeKind::AddSocket(AddSocketUpgrade {
+                            level: socket_index as u32 - 1,
+                        })],
+                        then: UpgradeKind::AddSocket(AddSocketUpgrade {
+                            level: socket_index as u32,
+                        }),
+                    }
                 }
-            }
-        })
-        .collect()
+
+            };
+
+            unlocks.push(unlock);
+        }
+
+        // Generate the ring unlock, which requires the last socket of the current set
+        let when = if ring_level == 0 {
+            // Special case for the first ring, requires pink color and the last socket
+            vec![
+                UpgradeKind::AddColor(AddColorUpgrade {
+                    color: SocketColor::PINK,
+                }),
+                UpgradeKind::AddSocket(AddSocketUpgrade {
+                    level: (ring_level * sockets_per_ring + sockets_per_ring) as u32,
+                }),
+            ]
+        } else {
+            // Regular case, just requires the last socket
+            vec![UpgradeKind::AddSocket(AddSocketUpgrade {
+                level: (ring_level * sockets_per_ring + sockets_per_ring) as u32,
+            })]
+        };
+
+        unlocks.push(Unlock {
+            when,
+            then: UpgradeKind::AddRing(AddRingUpgrade {
+                level: (ring_level + 1) as u32,
+            }),
+        });
+    }
+
+    unlocks
 }
 
 fn build_color_unlocks() -> Vec<Unlock> {
@@ -289,6 +344,36 @@ fn build_color_enhance_unlocks() -> Vec<Unlock> {
                 tier: 1,
             }),
         },
+        Unlock {
+            when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::GREEN,
+                tier: 1,
+            })],
+            then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::ORANGE,
+                tier: 1,
+            }),
+        },
+        Unlock {
+            when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::ORANGE,
+                tier: 1,
+            })],
+            then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 2,
+            }),
+        },
+        Unlock {
+            when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 2,
+            })],
+            then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 3,
+            }),
+        }
     ]
 }
 
@@ -350,10 +435,17 @@ fn on_purchase(
         volume: 2.
     });
 
+    let ring_count = q_rings.iter().count();
+
     match &purchase.upgrade.upgrade_kind {
         UpgradeKind::None => {}
         UpgradeKind::AddSocket(_) => {
             for (ring_entity, mut ring) in q_rings.iter_mut() {
+                if ring.index != ring_count - 1 {
+                    // sockets only get added to the newest ring
+                    continue;
+                }
+
                 let mesh = gameplay_meshes.quad64.clone();
 
                 for socket_entity in &ring.sockets {
@@ -440,7 +532,7 @@ fn on_purchase(
                     data: Vec4::new(RING_RADIUS, RING_THICKNESS, 0., 0.),
                 }),
                 socket_materials,
-                any_existing_ring.1.sockets.len(),
+                2,
                 time,
                 existing_ring_count,
             )
@@ -537,6 +629,14 @@ fn upgrade_description(upgrade: &Upgrade) -> impl Into<String> {
                 tier: 1,
             } => "BLUE orbs new behavior",
             EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 2,
+            } => "BLUE orbs more effective",
+            EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 3,
+            } => "BLUE orbs more effective",
+            EnhanceColorUpgrade {
                 color: SocketColor::RED,
                 tier: 1,
             } => "RED orbs new behavior",
@@ -544,6 +644,10 @@ fn upgrade_description(upgrade: &Upgrade) -> impl Into<String> {
                 color: SocketColor::GREEN,
                 tier: 1,
             } => "GREEN orbs new behavior",
+            EnhanceColorUpgrade {
+                color: SocketColor::ORANGE,
+                tier: 1,
+            } => "ORANGE orbs more effective",
             _ => "You are seeing this message because I made a mistake.",
         },
     };

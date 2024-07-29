@@ -82,10 +82,20 @@ pub fn map_socket_color_description_text(socket_color: SocketColor, upgrade_hist
         SocketColor::BLUE => {
             if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::BLUE,
+                tier: 3,
+            })) {
+                format!("Slots into a socket. Grants $6 for ALL other socketed blue orbs.")
+            } else if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
+                tier: 2,
+            })) {
+                format!("Slots into a socket. Grants $4 for ALL other socketed blue orbs.")
+            } else if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::BLUE,
                 tier: 1,
             })) {
-                format!("Slots into a socket. Grants $1 for ALL other socketed blue orbs.")
-            } else {
+                format!("Slots into a socket. Grants $2 for ALL other socketed blue orbs.")
+            }else {
                 format!("Slots into a socket. Grants ${} every time it is triggered.", 1.)
             }
         },
@@ -94,7 +104,7 @@ pub fn map_socket_color_description_text(socket_color: SocketColor, upgrade_hist
                 color: SocketColor::RED,
                 tier: 1,
             })){
-                format!("Grants no $. Triggers adjacent sockets on this AND adacent rings when triggered.")
+                format!("Grants no $. Triggers adjacent sockets when triggered. Sockets triggered this way are twice as effective.")
             } else {
                 format!("Grants no $. Triggers adjacent sockets when triggered.")
             }
@@ -104,12 +114,21 @@ pub fn map_socket_color_description_text(socket_color: SocketColor, upgrade_hist
                 color: SocketColor::GREEN,
                 tier: 1,
             })){
-                format!("Grants ${} for each trigger in the ring's previous cycle. Also grants {}% of global pending income.", 1., 10)
+                format!("Grants ${} for each trigger in the ALL rings' previous cycles.", 1.)
             } else {
                 format!("Grants ${} for each trigger in the ring's previous cycle.", 1.)
             }
         },
-        SocketColor::ORANGE => format!("Reduces the cooldown of all sockets in the ring by {} second(s).", 0.5),
+        SocketColor::ORANGE => {
+            if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+                color: SocketColor::ORANGE,
+                tier: 1,
+            })){
+                format!("Reduces the cooldown of all sockets in the ring by {} second(s).", 1.0)
+            } else {
+                format!("Reduces the cooldown of all sockets in the ring by {} second(s).", 0.5)
+            }
+        },
         SocketColor::PINK => format!("When triggered, increases the cycle's multiplier by {}.", 1.),
     }
 }
