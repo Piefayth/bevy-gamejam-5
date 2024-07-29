@@ -84,7 +84,7 @@ pub fn map_socket_color_description_text(socket_color: SocketColor, upgrade_hist
                 color: SocketColor::BLUE,
                 tier: 3,
             })) {
-                format!("Slots into a socket. Grants $6 for ALL other socketed blue orbs. SOFT Triggers ALL other blue orbs. ")
+                format!("Slots into a socket. Grants $6 for ALL other socketed blue orbs. Triggers ALL other blue orbs. ")
             } else if upgrade_history.history.contains(&UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::BLUE,
                 tier: 2,

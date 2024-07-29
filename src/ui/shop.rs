@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 
 use bevy::{
     audio::PlaybackMode, color::palettes::{
@@ -56,6 +56,7 @@ pub enum UpgradeKind {
     AddColor(AddColorUpgrade),
     AddRing(AddRingUpgrade),
     EnhanceColor(EnhanceColorUpgrade),
+    Win,
 }
 
 #[derive(Default, PartialEq, Eq, Hash, Clone)]
@@ -156,7 +157,7 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
             SocketColor::NONE => todo!(),
             SocketColor::BLUE => match upgrade.tier {
                 1 => BigUint::from(1000u32),
-                2 => BigUint::from(25000u32),
+                2 => BigUint::from(10000u32),
                 3 => BigUint::from(50000u32),
                 _ => panic!("oops"),
             },
@@ -164,6 +165,9 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
             SocketColor::GREEN => BigUint::from(100000u32),
             SocketColor::ORANGE => BigUint::from(20000u32),
             SocketColor::PINK => BigUint::from(1000000u32),
+        },
+        UpgradeKind::Win => {
+            BigUint::from_str("10000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000").unwrap()
         },
     }
 }
@@ -187,6 +191,13 @@ fn on_new_shop(
     unlocks.0 = add_ring_and_socket_unlocks();
     unlocks.0.extend(build_color_unlocks());
     unlocks.0.extend(build_color_enhance_unlocks());
+    unlocks.0.push(Unlock {
+        when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
+            color: SocketColor::GREEN,
+            tier: 1,
+        })],
+        then: UpgradeKind::Win,
+    });
 
     let parent = trigger.event().parent;
     commands.entity(parent).with_children(|gameplay_parent| {
@@ -356,7 +367,7 @@ fn build_color_enhance_unlocks() -> Vec<Unlock> {
         },
         Unlock {
             when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
-                color: SocketColor::ORANGE,
+                color: SocketColor::RED,
                 tier: 1,
             })],
             then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
@@ -367,8 +378,8 @@ fn build_color_enhance_unlocks() -> Vec<Unlock> {
         // todo: orange unlocks pink?
         Unlock {
             when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
-                color: SocketColor::BLUE,
-                tier: 2,
+                color: SocketColor::ORANGE,
+                tier: 1,
             })],
             then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::BLUE,
@@ -537,7 +548,8 @@ fn on_purchase(
                 existing_ring_count,
             )
         }
-        UpgradeKind::EnhanceColor(_) => {}
+        UpgradeKind::EnhanceColor(_) => {},
+        UpgradeKind::Win => {},
     }
 
     // 2. Unlock what is available now
@@ -650,6 +662,7 @@ fn upgrade_description(upgrade: &Upgrade) -> impl Into<String> {
             } => "ORANGE orbs more effective",
             _ => "You are seeing this message because I made a mistake.",
         },
+        UpgradeKind::Win => "That's it for now. :)",
     };
     format!("{}", description)
 }

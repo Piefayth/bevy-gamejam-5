@@ -141,7 +141,7 @@ fn spawn_level(
 ) {
     if cfg!(feature = "dev") {
         //let large_number_str = "500000000000000000000000000000";
-        let large_number_str = "5555555555550";
+        let large_number_str = "0";
         let large_number = BigUint::parse_bytes(large_number_str.as_bytes(), 10)
             .expect("Failed to parse big number");
         currency.amount = large_number;
