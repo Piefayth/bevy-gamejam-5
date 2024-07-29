@@ -161,8 +161,8 @@ fn upgrade_cost(upgrade_kind: UpgradeKind) -> BigUint {
                 _ => panic!("oops"),
             },
             SocketColor::RED => BigUint::from(3000u32),
-            SocketColor::GREEN => BigUint::from(20000u32),
-            SocketColor::ORANGE => BigUint::from(100000u32),
+            SocketColor::GREEN => BigUint::from(100000u32),
+            SocketColor::ORANGE => BigUint::from(20000u32),
             SocketColor::PINK => BigUint::from(1000000u32),
         },
     }
@@ -340,17 +340,17 @@ fn build_color_enhance_unlocks() -> Vec<Unlock> {
                 tier: 1,
             })],
             then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
-                color: SocketColor::GREEN,
+                color: SocketColor::ORANGE,
                 tier: 1,
             }),
         },
         Unlock {
             when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
-                color: SocketColor::GREEN,
+                color: SocketColor::ORANGE,
                 tier: 1,
             })],
             then: UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
-                color: SocketColor::ORANGE,
+                color: SocketColor::GREEN,
                 tier: 1,
             }),
         },
@@ -364,6 +364,7 @@ fn build_color_enhance_unlocks() -> Vec<Unlock> {
                 tier: 2,
             }),
         },
+        // todo: orange unlocks pink?
         Unlock {
             when: vec![UpgradeKind::EnhanceColor(EnhanceColorUpgrade {
                 color: SocketColor::BLUE,
@@ -506,7 +507,6 @@ fn on_purchase(
         }
         UpgradeKind::AddRing(_) => {
             let existing_ring_count = q_rings.iter().count();
-            let any_existing_ring = q_rings.iter().next().unwrap();
 
             let (camera_entity, camera_transform)= q_camera.single();
 
@@ -635,7 +635,7 @@ fn upgrade_description(upgrade: &Upgrade) -> impl Into<String> {
             EnhanceColorUpgrade {
                 color: SocketColor::BLUE,
                 tier: 3,
-            } => "BLUE orbs more effective",
+            } => "BLUE orbs new behavior",
             EnhanceColorUpgrade {
                 color: SocketColor::RED,
                 tier: 1,

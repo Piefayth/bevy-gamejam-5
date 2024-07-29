@@ -1,6 +1,6 @@
 //! Spawn the main level by triggering other observers.
 
-use std::f32::consts::PI;
+use std::{collections::VecDeque, f32::consts::PI};
 
 use bevy::{
     audio::{PlaybackMode, Volume},
@@ -63,8 +63,8 @@ pub struct SpawnLevel;
 
 #[derive(Component, Default)]
 pub struct Ring {
-    pub cycle: Vec<SocketColor>,
-    pub previous_cycle: Vec<SocketColor>,
+    pub cycle: Vec<CycleTrigger>,
+    pub previous_cycle: Vec<CycleTrigger>,
     pub previous_bonuses: Vec<CycleBonus>,
     pub pending_amount: BigUint,
     pub cycle_start_seconds: f32,
@@ -73,8 +73,16 @@ pub struct Ring {
     pub cycle_count: BigUint,
     pub cycle_multiplier: f32,
     pub sockets: Vec<Entity>,
-    pub cycle_display_panels: Vec<Entity>,
+    pub cycle_display_panels: VecDeque<Entity>,
     pub index: usize,
+}
+
+#[derive(Default, Clone, Copy, PartialEq, Eq, Debug)]
+pub struct CycleTrigger {
+    pub color: SocketColor,
+    pub socket_index: usize,
+    pub ring_index: usize,
+    pub soft: bool,
 }
 
 #[derive(Default, PartialEq, Eq, Hash, Clone, Copy, Debug)]
@@ -133,7 +141,7 @@ fn spawn_level(
 ) {
     if cfg!(feature = "dev") {
         //let large_number_str = "500000000000000000000000000000";
-        let large_number_str = "4000";
+        let large_number_str = "5555555555550";
         let large_number = BigUint::parse_bytes(large_number_str.as_bytes(), 10)
             .expect("Failed to parse big number");
         currency.amount = large_number;
